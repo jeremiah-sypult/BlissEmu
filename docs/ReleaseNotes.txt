@@ -1,0 +1,57 @@
+v2.0.4 - ???
+- Fixed a bug where the ECS keyboard was not being scanned, which prevented
+  use of the keyboard in the games that require it.
+- 
+
+v2.0.3 - April 25, 2005
+- Fixed a bug where I was accidentally requesting a DirectX device with
+  hardware vertex processing, even though it's not required.  This prevented
+  DirectX from initializing properly on any systems with video cards that
+  do not support hardware vertex processing.
+- Fixed a problem where the check for the file extension was case-sensitive,
+  preventing filenames in ALL CAPS from loading correctly.
+- Changed audio to flush the audio buffers on every video frame, resulting in
+  significantly less jerky video output. The need for this was actually
+  exposed by the fix in 2.0.2 that removed video output as the performance
+  bottleneck.
+- Name of the game being played is now displayed in the window title.
+- Added the ability to start up in fullscreen mode using "/fullscreen" or
+  "-fullscreen". Useful for the various emulator front-ends.
+
+v2.0.2 - April 25, 2005
+- Fixed a major performance bottleneck in the use of the Direct3D Present()
+  function. Turns out there is a big difference between "IMMEDIATE" and
+  "DONOTWAIT" that the Direct3D docs don't exactly make clear. The end result
+  is that the emulation should be MUCH smoother for everyone in this release.
+- Enabled Electronic Computer System (ECS) support. Games that used the ECS
+  now work correctly, including The Jetsons, Melody Blaster, Mind Strike,
+  Mr. Basic, Scooby Doo's Maze Chase, the Song Players, and World Series
+  Major League Baseball. The input configuration dialog still needs some
+  cleanup work related to the ECS, but at least it's functional for now.
+- Added support for banked ROMs in cartridges. As a result, World Series Major
+  League Baseball now works correctly.
+- Fixed several collision detection problems (Space Spartans, Mouse Trap, etc.)
+- Reworked .bin/.int support to no longer use bin2rip.exe. The database of
+  known cartridges is exposed in the file "knowncarts.cfg". If you update
+  this file to add new cartridges or fix existing mappings, please send
+  me your updates so others can benefit.
+- Several carts in .bin/.int format that were not loading properly are
+  now working (AD&D Treasure of Tarmin, for example).
+- Added support for cartridge RAM. Land Battle and USCF Chess are now
+  working.
+- Added .zip support. Bliss will search for the first .bin or .int file
+  found in the .zip that matches a known configuration in the "knowncarts.cfg"
+  database and attempt to load it.
+- Reworked .rom support to no longer use rom2rip.exe
+
+v2.0.1 - April 10, 2005
+- Enabled Intellivoice support. Note that World Series Major League Baseball
+  is still not working, however, due to a lack of support for ROM banking and
+  a lack of ECS support.
+- Fixed graphical glitches that were occuring in some games
+- Added the ability to pass a rom filename on the command line for Bliss
+  to run immediately on startup
+- Changed open dialog to be resizable
+
+v2.0.0 - April 8, 2005
+- First release
