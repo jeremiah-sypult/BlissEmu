@@ -1,0 +1,64 @@
+ 
+#ifndef ROM_H
+#define ROM_H
+
+#include "Memory.h"
+#include "core/types.h"
+
+class ROM : public Memory
+{
+
+public:
+    ROM(const CHAR* name, const CHAR* defaultFilename, UINT32 defaultFileOffset, UINT8 byteWidth, UINT16 size, UINT16 location, BOOL internal = FALSE);
+    ROM(const CHAR* name, void* image, UINT8 byteWidth, UINT16 size, UINT16 location, UINT16 readAddressMask = 0xFFFF);
+    virtual ~ROM();
+
+    const CHAR* getName();
+    const CHAR* getDefaultFileName();
+    UINT32 getDefaultFileOffset();
+    BOOL load(const CHAR* filename);
+    BOOL load(const CHAR* filename, UINT32 offset);
+    BOOL load(void* image);
+	BOOL isLoaded() { return loaded; }
+    BOOL isInternal() { return internal; }
+
+    //enabled attributes
+    void SetEnabled(BOOL b);
+    BOOL IsEnabled() { return enabled; }
+
+    //functions to implement the Memory interface
+	virtual void reset() {}
+    UINT16 getSize();
+    UINT16 getAddress();
+    UINT16 getReadAddressMask();
+    UINT16 getWriteAddressMask();
+    UINT8  getByteWidth();
+
+    virtual UINT16 peek(UINT16 location);
+    virtual void poke(UINT16 location, UINT16 value);
+
+private:
+    void Initialize(const CHAR* n, const CHAR* f, UINT32 o, UINT8 byteWidth, UINT16 size, UINT16 location, UINT16 readMask);
+
+    UINT16 (ROM::*peekFunc)(UINT16); 
+    UINT16 peek1(UINT16 location);
+    UINT16 peek2(UINT16 location);
+    UINT16 peek4(UINT16 location);
+    UINT16 peekN(UINT16 location);
+
+    CHAR*    name;
+    CHAR*    filename;
+    UINT32   fileoffset;
+
+    void*    image;
+    UINT8    byteWidth;
+    BOOL     enabled;
+    UINT16   size;
+    UINT16   location;
+    UINT16   readAddressMask;
+	BOOL	 loaded;
+	BOOL	 internal;
+
+};
+
+#endif
