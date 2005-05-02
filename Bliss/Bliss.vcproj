@@ -38,7 +38,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="thirdparty\zlib122\projects\visualc6\Win32_DLL_Debug\zlib1d.lib  d3d9.lib dsound.lib dinput8.lib dxguid.lib"
+				AdditionalDependencies="thirdparty\zlib122\projects\visualc6\Win32_LIB_Debug\zlibd.lib  d3d9.lib dsound.lib dinput8.lib dxguid.lib"
 				OutputFile="$(OutDir)/Bliss.exe"
 				LinkIncremental="2"
 				GenerateDebugInformation="TRUE"
@@ -93,7 +93,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="thirdparty\zlib122\projects\visualc6\Win32_LIB_ASM_Release\zlib.lib d3d9.lib dsound.lib dinput8.lib dxguid.lib"
+				AdditionalDependencies="thirdparty\zlib122\projects\visualc6\Win32_LIB_Release\zlib.lib d3d9.lib dsound.lib dinput8.lib dxguid.lib"
 				OutputFile="$(OutDir)/Bliss.exe"
 				LinkIncremental="1"
 				GenerateDebugInformation="TRUE"
