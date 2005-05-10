@@ -22,7 +22,6 @@ class AY38900_Registers : public RAM
 
         AY38900* ay38900;
         UINT16   memory[0x40];
-        BOOL     visible;
 
 };
 

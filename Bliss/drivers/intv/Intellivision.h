@@ -2,6 +2,7 @@
 #ifndef INTELLIVISION_H
 #define INTELLIVISION_H
 
+#include "core/Emulator.h"
 #include "HandController.h"
 #include "ECS.h"
 #include "Intellivoice.h"
@@ -29,7 +30,7 @@ class Intellivision : public Emulator
         RAM         RAM8bit;
         RAM         RAM16bit;
         ROM         execROM;
-        GROM        grom;
+        ROM         grom;
         GRAM        gram;
 
         //hand controllers

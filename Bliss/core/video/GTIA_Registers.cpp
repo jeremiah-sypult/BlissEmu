@@ -16,12 +16,12 @@ void GTIA_Registers::init(GTIA* g)
     gtia = g;
 }
 
-UINT16 GTIA_Registers::getSize()
+UINT16 GTIA_Registers::getReadSize()
 {
     return 0x20;
 }
 
-UINT16 GTIA_Registers::getAddress()
+UINT16 GTIA_Registers::getReadAddress()
 {
     return 0xC000;
 }
@@ -29,6 +29,16 @@ UINT16 GTIA_Registers::getAddress()
 UINT16 GTIA_Registers::getReadAddressMask()
 {
     return 0xFF1F;
+}
+
+UINT16 GTIA_Registers::getWriteSize()
+{
+    return 0x20;
+}
+
+UINT16 GTIA_Registers::getWriteAddress()
+{
+    return 0xC000;
 }
 
 UINT16 GTIA_Registers::getWriteAddressMask()

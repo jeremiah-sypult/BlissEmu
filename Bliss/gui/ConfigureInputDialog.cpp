@@ -32,6 +32,8 @@ void ConfigureInputDialog::OnShowWindow(BOOL show, UINT i)
 {
     CDialog::OnShowWindow(show, i);
 
+    firstInputMark = 0;
+
     if (!show)
         return;
 
@@ -106,9 +108,13 @@ void ConfigureInputDialog::OnTimer(UINT)
 
         this->configuredProducerGuid = nextProd->getGuid();
         this->configuredEnum = input;
-        EndDialog(IDOK);
+        if (firstInputMark == 0)
+            firstInputMark = clock();
         break;
     }
+
+    if (firstInputMark != 0 && (clock() - firstInputMark)/CLK_TCK > 0)
+        EndDialog(IDOK);
 }
 
 CStatic* ConfigureInputDialog::GetInputLabel()

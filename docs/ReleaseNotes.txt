@@ -1,7 +1,13 @@
 v2.0.4 - ???
+- Fixed a bug where the Intellivoice would only speak during the title screen
+  of each Intellivoice games, but would not speak the in-game phrases. The
+  Intellivoice emulation now properly speaks all phrases.
+- Added the ability to pause the game currently in progress.
+- Added the ability to unbind input configurations, thus leaving an emulated
+  input device without a configurated input
 - Fixed a bug where the ECS keyboard was not being scanned, which prevented
   use of the keyboard in the games that require it.
-- 
+- Fixed the icon for the options window.
 
 v2.0.3 - April 25, 2005
 - Fixed a bug where I was accidentally requesting a DirectX device with

@@ -88,74 +88,79 @@ void SP0256::resetProcessor()
 
 INT32 SP0256::tick(INT32 minimum)
 {
-    if (idle)
+    if (idle) {
+        for (int i = 0; i < minimum; i++)
+            audioOutputLine->playSample(0);
         return minimum;
+    }
 
     INT32 totalTicks = 0;
     do {
-    if (!speaking) {
-        speaking = TRUE;
-        lrqHigh = TRUE;
-        pc = 0x1000 | (command << 1);
-        bitsLeft = 0;
-        command = 0;
-    }
 
-    //if the speaking filters are empty, fill 'em up
-    while (repeat == 0) {
-        INT32 repeatBefore = repeatPrefix;
-        decode();
-        if (repeatBefore != 0)
-            repeatPrefix = 0;
-    }
-
-    INT32 sample = 0;
-    if (period == 0) {
-        if (periodCounter == 0) {
-            periodCounter = 64;
-            repeat--;
-            for (UINT8 j = 0; j < 6; j++)
-                y[j][0] = y[j][1] = 0;
+        if (!speaking) {
+            speaking = TRUE;
+            lrqHigh = TRUE;
+            pc = 0x1000 | (command << 1);
+            bitsLeft = 0;
+            command = 0;
         }
-        else
-            periodCounter--;
 
-        sample = ((amplitude & 0x1F) << ((amplitude & 0xE0) >> 5));
-        BOOL noise = ((random & 1) != 0);
-        random = (random >> 1) ^ (noise ? 0x14000 : 0);
-        if (!noise)
-            sample = -sample;
-    }
-    else {
-        if (periodCounter == 0) {
-            periodCounter = period;
-            repeat--;
+        //if the speaking filters are empty, fill 'em up
+        while (!idle && repeat == 0) {
+            INT32 repeatBefore = repeatPrefix;
+            decode();
+            if (repeatBefore != 0)
+                repeatPrefix = 0;
+        }
+
+        INT32 sample = 0;
+        if (period == 0) {
+            if (periodCounter == 0) {
+                periodCounter = 64;
+                repeat--;
+                for (UINT8 j = 0; j < 6; j++)
+                    y[j][0] = y[j][1] = 0;
+            }
+            else
+                periodCounter--;
+
             sample = ((amplitude & 0x1F) << ((amplitude & 0xE0) >> 5));
-            for (INT32 j = 0; j < 6; j++)
-                y[j][0] = y[j][1] = 0;
-
+            BOOL noise = ((random & 1) != 0);
+            random = (random >> 1) ^ (noise ? 0x14000 : 0);
+            if (!noise)
+                sample = -sample;
         }
-        else
-            periodCounter--;
-    }
+        else {
+            if (periodCounter == 0) {
+                periodCounter = period;
+                repeat--;
+                sample = ((amplitude & 0x1F) << ((amplitude & 0xE0) >> 5));
+                for (INT32 j = 0; j < 6; j++)
+                    y[j][0] = y[j][1] = 0;
 
-    period = ((period | 0x10000) + periodInterpolation) & 0xFFFF;
-    amplitude = ((amplitude | 0x10000) + amplitudeInterpolation) & 0xFFFF;
+            }
+            else
+                periodCounter--;
+        }
 
-    for (INT32 i = 0; i < 6; i++) {
-        sample += ((qtbl[0x80+b[i]]*y[i][1]) >> 9);
-        sample += ((qtbl[0x80+f[i]]*y[i][0]) >> 8);
-        y[i][1] = y[i][0];
-        y[i][0] = sample;
-    }
+        period = ((period | 0x10000) + periodInterpolation) & 0xFFFF;
+        amplitude = ((amplitude | 0x10000) + amplitudeInterpolation) & 0xFFFF;
 
-    //clamp the sample to a 12-bit range
-    if (sample > 2047) sample = 2047;
-    if (sample < -2048) sample = -2048;
+        for (INT32 i = 0; i < 6; i++) {
+            sample += ((qtbl[0x80+b[i]]*y[i][1]) >> 9);
+            sample += ((qtbl[0x80+f[i]]*y[i][0]) >> 8);
+            y[i][1] = y[i][0];
+            y[i][0] = sample;
+        }
 
-    audioOutputLine->playSample((INT16)(sample << 4));
+        //clamp the sample to a 12-bit range
+        if (sample > 2047) sample = 2047;
+        if (sample < -2048) sample = -2048;
 
-    totalTicks++;
+        audioOutputLine->playSample((INT16)(sample << 4));
+
+        totalTicks++;
+
     } while (totalTicks < minimum);
     return totalTicks;
 }
@@ -185,6 +190,7 @@ INT32 SP0256::readBits(INT32 numBits, BOOL reverseOrder) {
             bitsLeft += 10;
         }
         else {
+            //error, read outside of bounds
             currentBits |= (0x03FF << bitsLeft);
             bitsLeft += 10;
             pc = (pc+1) & 0xFFFF;

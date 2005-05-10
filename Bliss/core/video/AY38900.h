@@ -4,11 +4,11 @@
 
 #include "core/cpu/Processor.h"
 #include "core/memory/MemoryBus.h"
+#include "core/memory/ROM.h"
 #include "VideoProducer.h"
 #include "AY38900_Registers.h"
 #include "MOB.h"
 #include "BackTabRAM.h"
-#include "GROM.h"
 #include "GRAM.h"
 
 #define AY38900_PIN_IN_SST 0
@@ -21,11 +21,34 @@ class AY38900 : public Processor, public VideoProducer
     friend class AY38900_Registers;
 
 public:
-	AY38900(MemoryBus* mb, GROM* go, GRAM* ga);
-	INT32 getClockSpeed();
-	void resetVideoProducer();
+	AY38900(MemoryBus* mb, ROM* go, GRAM* ga);
+
+    /**
+     * Implemented from the Processor interface.
+     * Returns the clock speed of the AY-3-8900, currently hardcoded to the NTSC clock
+     * rate of 3.579545 Mhz.
+     */
+	INT32 getClockSpeed() { return 3579545; }
+
+    /**
+     * Implemented from the Processor interface.
+     */
 	void resetProcessor();
-	void setVideoOutputDevice(IDirect3DDevice9* vod);
+
+    /**
+     * Implemented from the Processor interface.
+     */
+    INT32 tick(INT32);
+
+    /**
+     * Implemented from the VideoProducer interface.
+     */
+    void setVideoOutputDevice(IDirect3DDevice9* vod);
+
+    /**
+     * Implemented from the VideoProducer interface.
+     */
+    void render();
 
     //registers
     AY38900_Registers registers;
@@ -33,11 +56,8 @@ public:
 
 private:
 	void setGraphicsBusVisible(BOOL visible);
-	INT32 tick(INT32);
-	//void renderRow(INT32 rowNum);
 	void renderFrame();
 	BOOL somethingChanged();
-	void render();
 	void markClean();
 	void renderBorders();
 	void renderMOBs();
@@ -50,6 +70,7 @@ private:
 	void renderColoredSquares(INT32 x, INT32 y, UINT8 color0, UINT8 color1, UINT8 color2, UINT8 color3);
 	void determineMOBCollisions();
 	BOOL mobsCollide(INT32 mobNum0, INT32 mobNum1);
+	//void renderRow(INT32 rowNum);
 
 	const static INT32 TICK_LENGTH_SCANLINE;
     const static INT32 TICK_LENGTH_FRAME;
@@ -63,10 +84,13 @@ private:
     const static INT32 LOCATION_GRAM;
     const static INT32 LOCATION_COLORSTACK;
     const static INT32 FOREGROUND_BIT;
+    const static UINT8 stretch[];
+    const static UINT8 reverse[];
 
     MemoryBus* memoryBus;
 
-    BOOL                    mobBuffers[8][16][128];
+    //BOOL                    mobBuffers[8][16][128];
+    UINT16                  mobBuffers[8][128];
     MOB                     mobs[8];
     UINT8                   backgroundBuffer[160*96];
     IDirect3DDevice9*       videoOutputDevice;
@@ -75,8 +99,8 @@ private:
     D3DLOCKED_RECT          combinedBufferLock;
 
     //memory listeners, for optimizations
-    GROM*              grom;
-    GRAM*              gram;
+    ROM*              grom;
+    GRAM*             gram;
 
     //state info
     BOOL            inVBlank;

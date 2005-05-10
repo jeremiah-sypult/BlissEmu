@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="7.10"
-	Name="Bliss.Mfc"
+	Name="Bliss"
 	ProjectGUID="{124CF7CF-B0BE-478D-AC37-D90056856807}"
 	Keyword="MFCProj">
 	<Platforms>
@@ -448,12 +448,6 @@
 				</File>
 				<File
 					RelativePath=".\core\video\GRAM.h">
-				</File>
-				<File
-					RelativePath=".\core\video\GROM.cpp">
-				</File>
-				<File
-					RelativePath=".\core\video\GROM.h">
 				</File>
 				<File
 					RelativePath=".\core\video\GTIA.cpp">

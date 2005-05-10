@@ -14,7 +14,7 @@ Intellivision::Intellivision()
       RAM8bit(0x00F0, 0x0100, 8),
       RAM16bit(0x0160, 0x0200, 16),
       execROM("Executive ROM", "exec.bin", 0, 2, 0x1000, 0x1000),
-      grom(),
+      grom("GROM", "grom.bin", 0, 1, 0x0800, 0x3000),
       gram(),
       cpu(&memoryBus, 0x1000, 0x1004),
       stic(&memoryBus, &grom, &gram)

@@ -1,4 +1,4 @@
- 
+
 #include <stdio.h>
 #include <string.h>
 #include "ROM.h"
@@ -111,18 +111,27 @@ UINT32 ROM::getDefaultFileOffset()
     return fileoffset;
 }
 
-UINT16 ROM::getSize()
+UINT16 ROM::getReadSize()
 {
     return size;
 }
 
-UINT16 ROM::getAddress() {
+UINT16 ROM::getReadAddress() {
     return location;
 }
 
 UINT16 ROM::getReadAddressMask()
 {
     return readAddressMask;
+}
+
+UINT16 ROM::getWriteSize()
+{
+    return 0;
+}
+
+UINT16 ROM::getWriteAddress() {
+    return 0;
 }
 
 UINT16 ROM::getWriteAddressMask()

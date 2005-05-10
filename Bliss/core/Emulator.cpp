@@ -1,9 +1,6 @@
 
 #include "Emulator.h"
 #include "drivers/intv/Intellivision.h"
-#include "drivers/a5200/Atari5200.h"
-
-#define NUM_EMULATORS 1
 
 extern UINT32 systemIDs[NUM_EMULATORS];
 extern Emulator* emus[NUM_EMULATORS];
@@ -202,15 +199,14 @@ void Emulator::FlushAudio()
     audioMixer.flushAudio();
 }
 
-UINT32 systemIDs[NUM_EMULATORS] = {
+UINT32 Emulator::systemIDs[NUM_EMULATORS] = {
 //        0xE4453A0B,
         0x4AC771F8,
     };
 
-Intellivision inty;
-//Atari5200 a5200;
+Intellivision Emulator::inty;
 
-Emulator* emus[] = {
+Emulator* Emulator::emus[] = {
 //    &a5200,
     &inty,
 };

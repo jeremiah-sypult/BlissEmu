@@ -45,9 +45,11 @@ void MemoryBus::addMemory(Memory* m)
     UINT8 i;
 
     //get the important info
-    UINT16 size = m->getSize();
-    UINT16 location = m->getAddress();
+    UINT16 readSize = m->getReadSize();
+    UINT16 readAddress = m->getReadAddress();
     UINT16 readAddressMask = m->getReadAddressMask();
+    UINT16 writeSize = m->getWriteSize();
+    UINT16 writeAddress = m->getWriteAddress();
     UINT16 writeAddressMask = m->getWriteAddressMask();
 
     //add all of the readable locations, if any
@@ -65,8 +67,8 @@ void MemoryBus::addMemory(Memory* m)
             UINT16 orMask = 0;
             for (UINT8 j = 0; j < zeroCount; j++)
                 orMask |= (i & (1<<j)) << bitShifts[j];
-            UINT16 nextAddress = location | orMask;
-            UINT16 nextEnd = nextAddress + size - 1;
+            UINT16 nextAddress = readAddress | orMask;
+            UINT16 nextEnd = nextAddress + readSize - 1;
 
             for (UINT64 k = nextAddress; k <= nextEnd; k++) {
                 UINT16 memCount = readableMemoryCounts[k];
@@ -91,8 +93,8 @@ void MemoryBus::addMemory(Memory* m)
             UINT16 orMask = 0;
             for (UINT8 j = 0; j < zeroCount; j++)
                 orMask |= (i & (1<<j)) << bitShifts[j];
-            UINT16 nextAddress = location | orMask;
-            UINT16 nextEnd = nextAddress + size - 1;
+            UINT16 nextAddress = writeAddress | orMask;
+            UINT16 nextEnd = nextAddress + writeSize - 1;
 
             for (UINT64 k = nextAddress; k <= nextEnd; k++) {
                 UINT16 memCount = writeableMemoryCounts[k];
@@ -114,9 +116,11 @@ void MemoryBus::removeMemory(Memory* m)
     UINT32 i;
 
     //get the important info
-    UINT16 size = m->getSize();
-    UINT16 location = m->getAddress();
+    UINT16 readSize = m->getReadSize();
+    UINT16 readAddress = m->getReadAddress();
     UINT16 readAddressMask = m->getReadAddressMask();
+    UINT16 writeSize = m->getWriteSize();
+    UINT16 writeAddress = m->getWriteAddress();
     UINT16 writeAddressMask = m->getWriteAddressMask();
 
     //add all of the readable locations, if any
@@ -134,8 +138,8 @@ void MemoryBus::removeMemory(Memory* m)
             UINT16 orMask = 0;
             for (UINT8 j = 0; j < zeroCount; j++)
                 orMask |= (i & (1<<j)) << bitShifts[j];
-            UINT16 nextAddress = location | orMask;
-            UINT16 nextEnd = nextAddress + size - 1;
+            UINT16 nextAddress = readAddress | orMask;
+            UINT16 nextEnd = nextAddress + readSize - 1;
 
             for (UINT64 k = nextAddress; k <= nextEnd; k++) {
                 UINT16 memCount = readableMemoryCounts[k];
@@ -168,8 +172,8 @@ void MemoryBus::removeMemory(Memory* m)
             UINT16 orMask = 0;
             for (UINT8 j = 0; j < zeroCount; j++)
                 orMask |= (i & (1<<j)) << bitShifts[j];
-            UINT16 nextAddress = location | orMask;
-            UINT16 nextEnd = nextAddress + size - 1;
+            UINT16 nextAddress = writeAddress | orMask;
+            UINT16 nextEnd = nextAddress + writeSize - 1;
 
             for (UINT64 k = nextAddress; k <= nextEnd; k++) {
                 UINT16 memCount = writeableMemoryCounts[k];

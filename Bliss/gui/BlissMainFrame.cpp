@@ -26,6 +26,7 @@ BEGIN_MESSAGE_MAP(BlissMainFrame, CFrameWnd)
     ON_UPDATE_COMMAND_UI(ID_FILE_CLOSE, OnCheckMenuItems)
 	ON_COMMAND(ID_SETTINGS, OnSettings)
 	ON_COMMAND(ID_APP_EXIT, OnClose)
+    ON_COMMAND(ID_VIEW_PAUSE, OnPause)
     ON_COMMAND(ID_VIEW_FULLSCREENMODE, OnFullScreenMode)
     ON_UPDATE_COMMAND_UI(ID_VIEW_FULLSCREENMODE, OnCheckMenuItems)
     ON_WM_NCHITTEST()
@@ -43,7 +44,7 @@ BlissMainFrame::BlissMainFrame()
 	directSound(NULL),
 	directSoundBuffer(NULL),
     manager(NULL),
-    running(FALSE),
+    runState(Stopped),
     currentEmu(NULL),
     currentRip(NULL),
     openDialog(NULL),
@@ -109,7 +110,11 @@ void BlissMainFrame::OnCheckMenuItems(CCmdUI* pCmdUI)
     switch (pCmdUI->m_nID) {
         case ID_FILE_RESET:
         case ID_FILE_CLOSE:
-            pCmdUI->Enable(running);
+            pCmdUI->Enable(runState >= Paused);
+            break;
+        case ID_VIEW_PAUSE:
+            pCmdUI->Enable(runState >= Paused);
+            pCmdUI->SetCheck(runState == Paused);
             break;
         case ID_VIEW_FULLSCREENMODE:
             pCmdUI->SetCheck(!presentParams.Windowed);
@@ -166,6 +171,13 @@ void BlissMainFrame::OnPaint()
     GetClientRect(&r);
     CBrush b(RGB(0,0,0));
 	dc.FillRect(&r, &b);
+    if (currentEmu && CheckDevice()) {
+		//render and display the video
+		direct3dDevice->BeginScene();
+		currentEmu->Render();
+		direct3dDevice->EndScene();
+		direct3dDevice->Present(NULL, NULL, NULL, NULL);
+    }
     /*
     if (!presentParams.Windowed && menuInFullscreen)
         DrawMenuBar();
@@ -180,22 +192,23 @@ void BlissMainFrame::OnFileOpen()
             this, 0);
     }
 
-    if (running)
+    if (runState == Running)
         directSoundBuffer->SetVolume(DSBVOLUME_MIN);
-    if (openDialog->DoModal() == IDCANCEL) {
-        if (running)
-            directSoundBuffer->SetVolume(DSBVOLUME_MAX);
-        return;
-    }
-    if (running)
+
+    INT_PTR result = openDialog->DoModal();
+
+    if (runState == Running)
         directSoundBuffer->SetVolume(DSBVOLUME_MAX);
+
+    if (result == IDCANCEL)
+        return;
 
     LoadAndRunRip(openDialog->GetPathName());
 }
 
 void BlissMainFrame::LoadAndRunRip(const CHAR* filename)
 {
-    if (running) {
+    if (runState >= Paused) {
         //the run method is already in progress, so release the current emu and rip
         ReleaseEmulatorInputs();
         ReleaseEmulator();
@@ -208,7 +221,7 @@ void BlissMainFrame::LoadAndRunRip(const CHAR* filename)
     //try to load the new rip
     if (!LoadRip(filename)) {
         MessageBox("Unable to load the specified file.", "Error", MB_OK);
-        running = FALSE;
+        runState = Stopped;
         return;
     }
 
@@ -224,10 +237,10 @@ void BlissMainFrame::LoadAndRunRip(const CHAR* filename)
         delete[] title;
     }
 
-    if (running) {
+    if (runState >= Paused) {
         //the run method is already in progress, so just re-initialize it and return
         if (!InitializeEmulator())
-            running = FALSE;
+            runState = Stopped;
         InitializeEmulatorInputs();
     }
     else {
@@ -340,7 +353,7 @@ BOOL BlissMainFrame::SaveRip(const CHAR* fileSubname)
 
 void BlissMainFrame::OnFileReset()
 {
-    if (!running || !currentEmu || !currentRip)
+    if (runState == Stopped || !currentEmu || !currentRip)
         return;
 
     currentEmu->Reset();
@@ -350,7 +363,7 @@ void BlissMainFrame::OnFileClose()
 {
     //if (!presentParams.Windowed)
     //    UnlockWindowUpdate();
-    running = FALSE;
+    runState = Stopped;
     this->RedrawWindow();
 }
 
@@ -360,17 +373,17 @@ void BlissMainFrame::OnSettings()
         optionsDialog = new BlissOptionsDialog(this);
     }
 
-    if (running)
+    if (runState == Running)
         directSoundBuffer->SetVolume(DSBVOLUME_MIN);
     if (optionsDialog->DoModal() == IDCANCEL) {
-        if (running)
+        if (runState == Running)
             directSoundBuffer->SetVolume(DSBVOLUME_MAX);
         return;
     }
-    if (running)
+    if (runState == Running)
         directSoundBuffer->SetVolume(DSBVOLUME_MAX);
 
-    if (running) {
+    if (runState >= Paused) {
         ReleaseEmulatorInputs();
         InitializeEmulatorInputs();
     }
@@ -378,7 +391,7 @@ void BlissMainFrame::OnSettings()
 
 void BlissMainFrame::OnClose()
 {
-    if (running) {
+    if (runState >= Paused) {
         OnFileClose();
         PostMessage(WM_CLOSE);
     }
@@ -392,8 +405,8 @@ void BlissMainFrame::Run()
 
     //as long as the user has not selected the close or exit menu items, keep truckin'
     directSoundBuffer->Play(0, 0, DSBPLAY_LOOPING);
-    running = TRUE;
-	while(running) {
+    runState = Running;
+	while(runState == Running) {
         //poll the input
 		manager->pollInputProducers();
 
@@ -414,17 +427,25 @@ void BlissMainFrame::Run()
         currentEmu->FlushAudio();
 
         //check for messages
-		while (running && PeekMessage(&msg, m_hWnd,  0, 0, PM_REMOVE))  {
+		while (runState == Running && PeekMessage(&msg, m_hWnd,  0, 0, PM_REMOVE))  {
             if (PreTranslateMessage(&msg))
                 continue;
 
 			TranslateMessage(&msg); 
 			DispatchMessage(&msg); 
-		} 
+		}
+
+		while (runState == Paused && GetMessage(&msg, m_hWnd,  0, 0))  {
+            if (PreTranslateMessage(&msg))
+                continue;
+
+			TranslateMessage(&msg); 
+			DispatchMessage(&msg); 
+		}
 
         //make sure we still have the d3d device
         if (!CheckDevice())
-            running = FALSE;
+            runState = Stopped;
 	}
     directSoundBuffer->Stop();
 }
@@ -740,8 +761,23 @@ LRESULT BlissMainFrame::OnStartUp()
     //TODO: handle direct input initialization errors
     InitializeDirectInput();
 
-    return OK;
+    return S_OK;
 }
+
+void BlissMainFrame::OnPause()
+{
+    SetPaused(runState != Paused);
+}
+
+void BlissMainFrame::SetPaused(BOOL paused)
+{
+    if (runState == Stopped)
+        return;
+
+    runState = (paused ? Paused : Running);
+    directSoundBuffer->SetVolume(runState == Running ? DSBVOLUME_MAX : DSBVOLUME_MIN);
+}
+
 
 void BlissMainFrame::OnFullScreenMode()
 {
@@ -753,6 +789,10 @@ void BlissMainFrame::SetFullScreen(BOOL fullScreen)
     if (presentParams.Windowed == !fullScreen)
         return;
 
+
+    if (runState == Running)
+       directSoundBuffer->SetVolume(DSBVOLUME_MIN);
+
     presentParams.Windowed = !fullScreen;
 
     if (!presentParams.Windowed) {
@@ -760,8 +800,6 @@ void BlissMainFrame::SetFullScreen(BOOL fullScreen)
         ModifyStyle(m_hWnd, BLISS_WINDOW_STYLE, BLISS_FULLSCREEN_STYLE, SWP_DRAWFRAME | SWP_FRAMECHANGED);
     }
 
-    //BOOL tmp = presentParams.Windowed;
-	//presentParams.Windowed = TRUE;
     if (currentEmu)
         currentEmu->ReleaseVideo();
 
@@ -778,6 +816,9 @@ void BlissMainFrame::SetFullScreen(BOOL fullScreen)
         SetWindowPos(&wndNoTopMost, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
         SetWindowPlacement(&wp);
     }
+
+    if (runState == Running)
+       directSoundBuffer->SetVolume(DSBVOLUME_MAX);
 }
 
 BOOL BlissMainFrame::CheckDevice()
@@ -827,13 +868,13 @@ void BlissMainFrame::ShutDown()
 
 void BlissMainFrame::OnEnterMenuLoop(BOOL)
 {
-    if (running)
+    if (runState == Running)
         directSoundBuffer->SetVolume(DSBVOLUME_MIN);
 }
 
 void BlissMainFrame::OnExitMenuLoop(BOOL)
 {
-    if (running)
+    if (runState == Running)
         directSoundBuffer->SetVolume(DSBVOLUME_MAX);
 }
 

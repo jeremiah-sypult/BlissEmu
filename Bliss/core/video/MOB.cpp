@@ -21,8 +21,9 @@ void MOB::reset() {
     boundingRectangle.y = 0;
     boundingRectangle.width = 0;
     boundingRectangle.height = 0;
-    changed           = TRUE;
+    shapeChanged      = TRUE;
     boundsChanged     = TRUE;
+    colorChanged      = TRUE;
 }
 
 void MOB::setXLocation(INT32 xLocation) {
@@ -31,7 +32,6 @@ void MOB::setXLocation(INT32 xLocation) {
 
     this->xLocation = xLocation;
     boundsChanged = TRUE;
-    changed = TRUE;
 }
 
 void MOB::setYLocation(INT32 yLocation) {
@@ -40,7 +40,6 @@ void MOB::setYLocation(INT32 yLocation) {
 
     this->yLocation = yLocation;
     boundsChanged = TRUE;
-    changed = TRUE;
 }
 
 
@@ -49,7 +48,7 @@ void MOB::setForegroundColor(INT32 foregroundColor) {
         return;
 
     this->foregroundColor = foregroundColor;
-    changed = TRUE;
+    colorChanged = TRUE;
 }
 
 void MOB::setCardNumber(INT32 cardNumber) {
@@ -57,7 +56,7 @@ void MOB::setCardNumber(INT32 cardNumber) {
         return;
 
     this->cardNumber = cardNumber;
-    changed = TRUE;
+    shapeChanged = TRUE;
 }
 
 void MOB::setVisible(BOOL isVisible) {
@@ -65,7 +64,6 @@ void MOB::setVisible(BOOL isVisible) {
         return;
 
     this->isVisible = isVisible;
-    changed = TRUE;
 }
 
 void MOB::setDoubleWidth(BOOL doubleWidth) {
@@ -74,7 +72,7 @@ void MOB::setDoubleWidth(BOOL doubleWidth) {
 
     this->doubleWidth = doubleWidth;
     boundsChanged = TRUE;
-    changed = TRUE;
+    shapeChanged = TRUE;
 }
 
 void MOB::setDoubleYResolution(BOOL doubleYResolution) {
@@ -83,7 +81,7 @@ void MOB::setDoubleYResolution(BOOL doubleYResolution) {
 
     this->doubleYResolution = doubleYResolution;
     boundsChanged = TRUE;
-    changed = TRUE;
+    shapeChanged = TRUE;
 }
 
 void MOB::setDoubleHeight(BOOL doubleHeight) {
@@ -92,7 +90,7 @@ void MOB::setDoubleHeight(BOOL doubleHeight) {
 
     this->doubleHeight = doubleHeight;
     boundsChanged = TRUE;
-    changed = TRUE;
+    shapeChanged = TRUE;
 }
 
 void MOB::setQuadHeight(BOOL quadHeight) {
@@ -101,7 +99,7 @@ void MOB::setQuadHeight(BOOL quadHeight) {
 
     this->quadHeight = quadHeight;
     boundsChanged = TRUE;
-    changed = TRUE;
+    shapeChanged = TRUE;
 }
 
 void MOB::setFlagCollisions(BOOL flagCollisions) {
@@ -109,7 +107,6 @@ void MOB::setFlagCollisions(BOOL flagCollisions) {
         return;
 
     this->flagCollisions = flagCollisions;
-    changed = TRUE;
 }
 
 void MOB::setHorizontalMirror(BOOL horizontalMirror) {
@@ -117,7 +114,7 @@ void MOB::setHorizontalMirror(BOOL horizontalMirror) {
         return;
 
     this->horizontalMirror = horizontalMirror;
-    changed = TRUE;
+    shapeChanged = TRUE;
 }
 
 void MOB::setVerticalMirror(BOOL verticalMirror) {
@@ -125,7 +122,7 @@ void MOB::setVerticalMirror(BOOL verticalMirror) {
         return;
 
     this->verticalMirror = verticalMirror;
-    changed = TRUE;
+    shapeChanged = TRUE;
 }
 
 void MOB::setBehindForeground(BOOL behindForeground) {
@@ -133,7 +130,6 @@ void MOB::setBehindForeground(BOOL behindForeground) {
         return;
 
     this->behindForeground = behindForeground;
-    changed = TRUE;
 }
 
 void MOB::setGROM(BOOL grom) {
@@ -141,11 +137,12 @@ void MOB::setGROM(BOOL grom) {
         return;
 
     this->isGrom = grom;
-    changed = TRUE;
+    shapeChanged = TRUE;
 }
 
 void MOB::markClean() {
-    changed = FALSE;
+    shapeChanged = FALSE;
+    colorChanged = FALSE;
 }
 
 MOBRect* MOB::getBounds() {

@@ -7,6 +7,35 @@
 #define MIN(v1, v2) (v1 < v2 ? v1 : v2)
 #define MAX(v1, v2) (v1 > v2 ? v1 : v2)
 
+#define MODE_VBLANK 0
+#define MODE_START_ACTIVE_DISPLAY 1
+#define MODE_IDLE_ACTIVE_DISPLAY 2
+#define MODE_FETCH_ROW_0 3
+#define MODE_RENDER_ROW_0 4
+#define MODE_FETCH_ROW_1 5
+#define MODE_RENDER_ROW_1 6
+#define MODE_FETCH_ROW_2 7
+#define MODE_RENDER_ROW_2 8
+#define MODE_FETCH_ROW_3 9
+#define MODE_RENDER_ROW_3 10
+#define MODE_FETCH_ROW_4 11
+#define MODE_RENDER_ROW_4 12
+#define MODE_FETCH_ROW_5 13
+#define MODE_RENDER_ROW_5 14
+#define MODE_FETCH_ROW_6 15
+#define MODE_RENDER_ROW_6 16
+#define MODE_FETCH_ROW_7 17
+#define MODE_RENDER_ROW_7 18
+#define MODE_FETCH_ROW_8 19
+#define MODE_RENDER_ROW_8 20
+#define MODE_FETCH_ROW_9 21
+#define MODE_RENDER_ROW_9 22
+#define MODE_FETCH_ROW_10 23
+#define MODE_RENDER_ROW_10 24
+#define MODE_FETCH_ROW_11 25
+#define MODE_RENDER_ROW_11 26
+#define MODE_FETCH_ROW_12 27
+
 struct CUSTOMVERTEX
 {
     FLOAT  x, y, z, rhw; // The position
@@ -36,7 +65,12 @@ const UINT32 AY38900::palette[32] = {
     0xFF4E57, 0xA496FF, 0x75CC80, 0xB51A58,
 };
 
-AY38900::AY38900(MemoryBus* mb, GROM* go, GRAM* ga)
+const UINT8 AY38900::stretch[] = {0x00, 0x03, 0x0C, 0x0F, 0x30, 0x33, 0x3C, 0x3F,
+                         0xC0, 0xC3, 0xCC, 0xCF, 0xF0, 0xF3, 0xFC, 0xFF};
+const UINT8 AY38900::reverse[] = {0x0, 0x8, 0x4, 0xC, 0x2, 0xA, 0x6, 0xE,
+                         0x1, 0x9, 0x5, 0xD, 0x3, 0xB, 0x7, 0xF};
+
+AY38900::AY38900(MemoryBus* mb, ROM* go, GRAM* ga)
 	: Processor("AY-3-8900"),
       memoryBus(mb),
       grom(go),
@@ -50,21 +84,15 @@ AY38900::AY38900(MemoryBus* mb, GROM* go, GRAM* ga)
 
     horizontalOffset = 0;
     verticalOffset   = 0;
-    blockTop         = false;
-    blockLeft        = false;
+    blockTop         = FALSE;
+    blockLeft        = FALSE;
     mode             = 0;
 }
 
-int AY38900::getClockSpeed() {
-    return 3579545;
-}
-        
-void AY38900::resetVideoProducer() {
-}
-
-void AY38900::resetProcessor() {
+void AY38900::resetProcessor()
+{
     //switch to bus copy mode
-    setGraphicsBusVisible(true);
+    setGraphicsBusVisible(TRUE);
 
     //reset the mobs
     for (UINT8 i = 0; i < 8; i++)
@@ -74,27 +102,342 @@ void AY38900::resetProcessor() {
     mode = -1;
     pinOut[AY38900_PIN_OUT_SR1]->isHigh = TRUE;
     pinOut[AY38900_PIN_OUT_SR2]->isHigh = TRUE;
-    previousDisplayEnabled = true;
-    displayEnabled         = false;
-    colorStackMode         = false;
-    colorModeChanged       = true;
-    bordersChanged         = true;
-    colorStackChanged      = true;
-    offsetsChanged         = true;
+    previousDisplayEnabled = TRUE;
+    displayEnabled         = FALSE;
+    colorStackMode         = FALSE;
+    colorModeChanged       = TRUE;
+    bordersChanged         = TRUE;
+    colorStackChanged      = TRUE;
+    offsetsChanged         = TRUE;
 
     //local register data
     borderColor = 0;
-    blockLeft = blockTop = false;
+    blockLeft = blockTop = FALSE;
     horizontalOffset = verticalOffset = 0;
 }
 
 void AY38900::setGraphicsBusVisible(BOOL visible) {
-    registers.visible = visible;
-    gram->visible = visible;
-    grom->visible = visible;
+    registers.SetEnabled(visible);
+    gram->SetEnabled(visible);
+    grom->SetEnabled(visible);
 }
 
-int AY38900::tick(INT32 minimum) {
+INT32 AY38900::tick(INT32 minimum) {
+    INT32 totalTicks = 0;
+    do {
+
+        switch (mode) {
+
+        //start of vertical blank
+        case MODE_VBLANK:
+            //come out of bus isolation mode
+            setGraphicsBusVisible(TRUE);
+            if (previousDisplayEnabled)
+                renderFrame();
+            displayEnabled = FALSE;
+
+            //start of vblank, so stop and go back to the main loop
+            processorBus->stop();
+
+            //release SR2, allowing the CPU to run
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = TRUE;
+
+            //kick the irq line
+            pinOut[AY38900_PIN_OUT_SR1]->isHigh = FALSE;
+
+            totalTicks += TICK_LENGTH_VBLANK;
+            if (totalTicks >= minimum) {
+                mode = MODE_START_ACTIVE_DISPLAY;
+                break;
+            }
+
+        case MODE_START_ACTIVE_DISPLAY:
+            pinOut[AY38900_PIN_OUT_SR1]->isHigh = TRUE;
+
+            //if the display is not enabled, skip the rest of the modes
+            if (!displayEnabled) {
+                previousDisplayEnabled = FALSE;
+                if (previousDisplayEnabled) {
+                    //render a blank screen
+                    for (int x = 0; x < 160; x++)
+                        for (int y = 0; x < 192; x++)
+                            ((UINT32**)combinedBufferLock.pBits)[x][y] = palette[borderColor];
+                }
+                mode = MODE_VBLANK;
+                totalTicks += (TICK_LENGTH_FRAME - TICK_LENGTH_VBLANK);
+                break;
+            }
+            else {
+                previousDisplayEnabled = TRUE;
+                pinOut[AY38900_PIN_OUT_SR2]->isHigh = FALSE;
+                totalTicks += TICK_LENGTH_START_ACTIVE_DISPLAY;
+                if (totalTicks >= minimum) {
+                    mode = MODE_IDLE_ACTIVE_DISPLAY;
+                    break;
+                }
+            }
+
+        case MODE_IDLE_ACTIVE_DISPLAY:
+            //switch to bus isolation mode, but only if the CPU has
+            //acknowledged ~SR2 by asserting ~SST
+            if (!pinIn[AY38900_PIN_IN_SST]->isHigh) {
+                pinIn[AY38900_PIN_IN_SST]->isHigh = TRUE;
+                setGraphicsBusVisible(FALSE);
+            }
+
+            //release SR2
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = TRUE;
+
+            totalTicks += TICK_LENGTH_IDLE_ACTIVE_DISPLAY +
+                (2*verticalOffset*TICK_LENGTH_SCANLINE);
+            if (totalTicks >= minimum) {
+                mode = MODE_FETCH_ROW_0;
+                break;
+            }
+
+        case MODE_FETCH_ROW_0:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = FALSE;
+            //renderRow((mode-3)/2);
+            totalTicks += TICK_LENGTH_FETCH_ROW;
+            if (totalTicks >= minimum) {
+                mode = MODE_RENDER_ROW_0;
+                break;
+            }
+
+        case MODE_RENDER_ROW_0:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = TRUE;
+            pinIn[AY38900_PIN_IN_SST]->isHigh = TRUE;
+            totalTicks += TICK_LENGTH_RENDER_ROW;
+            if (totalTicks >= minimum) {
+                mode = MODE_FETCH_ROW_1;
+                break;
+            }
+
+        case MODE_FETCH_ROW_1:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = FALSE;
+            //renderRow((mode-3)/2);
+            totalTicks += TICK_LENGTH_FETCH_ROW;
+            if (totalTicks >= minimum) {
+                mode = MODE_RENDER_ROW_1;
+                break;
+            }
+
+        case MODE_RENDER_ROW_1:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = TRUE;
+            pinIn[AY38900_PIN_IN_SST]->isHigh = TRUE;
+            totalTicks += TICK_LENGTH_RENDER_ROW;
+            if (totalTicks >= minimum) {
+                mode = MODE_FETCH_ROW_2;
+                break;
+            }
+
+        case MODE_FETCH_ROW_2:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = FALSE;
+            //renderRow((mode-3)/2);
+            totalTicks += TICK_LENGTH_FETCH_ROW;
+            if (totalTicks >= minimum) {
+                mode = MODE_RENDER_ROW_2;
+                break;
+            }
+
+        case MODE_RENDER_ROW_2:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = TRUE;
+            pinIn[AY38900_PIN_IN_SST]->isHigh = TRUE;
+            totalTicks += TICK_LENGTH_RENDER_ROW;
+            if (totalTicks >= minimum) {
+                mode = MODE_FETCH_ROW_3;
+                break;
+            }
+
+        case MODE_FETCH_ROW_3:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = FALSE;
+            //renderRow((mode-3)/2);
+            totalTicks += TICK_LENGTH_FETCH_ROW;
+            if (totalTicks >= minimum) {
+                mode = MODE_RENDER_ROW_3;
+                break;
+            }
+
+        case MODE_RENDER_ROW_3:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = TRUE;
+            pinIn[AY38900_PIN_IN_SST]->isHigh = TRUE;
+            totalTicks += TICK_LENGTH_RENDER_ROW;
+            if (totalTicks >= minimum) {
+                mode = MODE_FETCH_ROW_4;
+                break;
+            }
+
+        case MODE_FETCH_ROW_4:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = FALSE;
+            //renderRow((mode-3)/2);
+            totalTicks += TICK_LENGTH_FETCH_ROW;
+            if (totalTicks >= minimum) {
+                mode = MODE_RENDER_ROW_4;
+                break;
+            }
+
+        case MODE_RENDER_ROW_4:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = TRUE;
+            pinIn[AY38900_PIN_IN_SST]->isHigh = TRUE;
+            totalTicks += TICK_LENGTH_RENDER_ROW;
+            if (totalTicks >= minimum) {
+                mode = MODE_FETCH_ROW_5;
+                break;
+            }
+
+        case MODE_FETCH_ROW_5:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = FALSE;
+            //renderRow((mode-3)/2);
+            totalTicks += TICK_LENGTH_FETCH_ROW;
+            if (totalTicks >= minimum) {
+                mode = MODE_RENDER_ROW_5;
+                break;
+            }
+
+        case MODE_RENDER_ROW_5:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = TRUE;
+            pinIn[AY38900_PIN_IN_SST]->isHigh = TRUE;
+            totalTicks += TICK_LENGTH_RENDER_ROW;
+            if (totalTicks >= minimum) {
+                mode = MODE_FETCH_ROW_6;
+                break;
+            }
+
+        case MODE_FETCH_ROW_6:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = FALSE;
+            //renderRow((mode-3)/2);
+            totalTicks += TICK_LENGTH_FETCH_ROW;
+            if (totalTicks >= minimum) {
+                mode = MODE_RENDER_ROW_6;
+                break;
+            }
+
+        case MODE_RENDER_ROW_6:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = TRUE;
+            pinIn[AY38900_PIN_IN_SST]->isHigh = TRUE;
+            totalTicks += TICK_LENGTH_RENDER_ROW;
+            if (totalTicks >= minimum) {
+                mode = MODE_FETCH_ROW_7;
+                break;
+            }
+
+        case MODE_FETCH_ROW_7:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = FALSE;
+            //renderRow((mode-3)/2);
+            totalTicks += TICK_LENGTH_FETCH_ROW;
+            if (totalTicks >= minimum) {
+                mode = MODE_RENDER_ROW_7;
+                break;
+            }
+
+        case MODE_RENDER_ROW_7:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = TRUE;
+            pinIn[AY38900_PIN_IN_SST]->isHigh = TRUE;
+            totalTicks += TICK_LENGTH_RENDER_ROW;
+            if (totalTicks >= minimum) {
+                mode = MODE_FETCH_ROW_8;
+                break;
+            }
+
+        case MODE_FETCH_ROW_8:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = FALSE;
+            //renderRow((mode-3)/2);
+            totalTicks += TICK_LENGTH_FETCH_ROW;
+            if (totalTicks >= minimum) {
+                mode = MODE_RENDER_ROW_8;
+                break;
+            }
+
+        case MODE_RENDER_ROW_8:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = TRUE;
+            pinIn[AY38900_PIN_IN_SST]->isHigh = TRUE;
+            totalTicks += TICK_LENGTH_RENDER_ROW;
+            if (totalTicks >= minimum) {
+                mode = MODE_FETCH_ROW_9;
+                break;
+            }
+
+        case MODE_FETCH_ROW_9:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = FALSE;
+            //renderRow((mode-3)/2);
+            totalTicks += TICK_LENGTH_FETCH_ROW;
+            if (totalTicks >= minimum) {
+                mode = MODE_RENDER_ROW_9;
+                break;
+            }
+
+        case MODE_RENDER_ROW_9:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = TRUE;
+            pinIn[AY38900_PIN_IN_SST]->isHigh = TRUE;
+            totalTicks += TICK_LENGTH_RENDER_ROW;
+            if (totalTicks >= minimum) {
+                mode = MODE_FETCH_ROW_10;
+                break;
+            }
+
+        case MODE_FETCH_ROW_10:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = FALSE;
+            //renderRow((mode-3)/2);
+            totalTicks += TICK_LENGTH_FETCH_ROW;
+            if (totalTicks >= minimum) {
+                mode = MODE_RENDER_ROW_10;
+                break;
+            }
+
+        case MODE_RENDER_ROW_10:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = TRUE;
+            pinIn[AY38900_PIN_IN_SST]->isHigh = TRUE;
+            totalTicks += TICK_LENGTH_RENDER_ROW;
+            if (totalTicks >= minimum) {
+                mode = MODE_FETCH_ROW_11;
+                break;
+            }
+
+        case MODE_FETCH_ROW_11:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = FALSE;
+            //renderRow((mode-3)/2);
+            totalTicks += TICK_LENGTH_FETCH_ROW;
+            if (totalTicks >= minimum) {
+                mode = MODE_RENDER_ROW_11;
+                break;
+            }
+
+        case MODE_RENDER_ROW_11:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = TRUE;
+
+            //this mode could be cut off in tick length if the vertical
+            //offset is greater than 1
+            if (verticalOffset == 0) {
+                totalTicks += TICK_LENGTH_RENDER_ROW;
+                if (totalTicks >= minimum) {
+                    mode = MODE_FETCH_ROW_12;
+                    break;
+                }
+            }
+            else if (verticalOffset == 1) {
+                totalTicks += TICK_LENGTH_RENDER_ROW - TICK_LENGTH_SCANLINE;
+                mode = MODE_VBLANK;
+                break;
+            }
+            else {
+                totalTicks += (TICK_LENGTH_RENDER_ROW - TICK_LENGTH_SCANLINE
+                        - (2 * (verticalOffset - 1) * TICK_LENGTH_SCANLINE));
+                mode = MODE_VBLANK;
+                break;
+            }
+
+        case MODE_FETCH_ROW_12:
+        default:
+            pinOut[AY38900_PIN_OUT_SR2]->isHigh = FALSE;
+            totalTicks += TICK_LENGTH_SCANLINE;
+            mode = MODE_VBLANK;
+            break;
+        }
+    } while (totalTicks < minimum);
+
+    return totalTicks;
+
+    /*
     int totalTicks = 0;
     do {
         //move to the next mode
@@ -103,10 +446,10 @@ int AY38900::tick(INT32 minimum) {
         switch (mode) {
             case 0:
                 //come out of bus isolation mode
-                setGraphicsBusVisible(true);
+                setGraphicsBusVisible(TRUE);
                 if (previousDisplayEnabled)
                     renderFrame();
-                displayEnabled = false;
+                displayEnabled = FALSE;
             
                 //start of vblank, so stop and go back to the main loop
                 processorBus->stop();
@@ -124,7 +467,7 @@ int AY38900::tick(INT32 minimum) {
 
                 //if the display is not enabled, skip the rest of the modes
                 if (!displayEnabled) {
-                    previousDisplayEnabled = false;
+                    previousDisplayEnabled = FALSE;
                     if (previousDisplayEnabled) {
                         //render a blank screen
                         for (int x = 0; x < 160; x++)
@@ -135,7 +478,7 @@ int AY38900::tick(INT32 minimum) {
                     totalTicks += (TICK_LENGTH_FRAME - TICK_LENGTH_VBLANK);
                 }
                 else {
-                    previousDisplayEnabled = true;
+                    previousDisplayEnabled = TRUE;
                     pinOut[AY38900_PIN_OUT_SR2]->isHigh = FALSE;
                     totalTicks += TICK_LENGTH_START_ACTIVE_DISPLAY;
                 }
@@ -146,7 +489,7 @@ int AY38900::tick(INT32 minimum) {
                 //acknowledged ~SR2 by asserting ~SST
                 if (!pinIn[AY38900_PIN_IN_SST]->isHigh) {
                     pinIn[AY38900_PIN_IN_SST]->isHigh = TRUE;
-                    setGraphicsBusVisible(false);
+                    setGraphicsBusVisible(FALSE);
                 }
 
                 //release SR2
@@ -221,7 +564,508 @@ int AY38900::tick(INT32 minimum) {
     } while (totalTicks < minimum);
 
     return totalTicks;
+    */
 }
+
+void AY38900::setVideoOutputDevice(IDirect3DDevice9* vod)
+{
+	if (this->videoOutputDevice != NULL) {
+		if (vertexBuffer != NULL) {
+			vertexBuffer->Release();
+			vertexBuffer = NULL;
+		}
+		if (combinedTexture != NULL) {
+			combinedTexture->Release();
+			combinedTexture = NULL;
+		}
+	}
+
+    this->videoOutputDevice = vod;
+
+	if (this->videoOutputDevice != NULL) {
+		//obtain the surface we desire
+		videoOutputDevice->CreateTexture(160, 192, 1, D3DUSAGE_DYNAMIC, D3DFMT_X8R8G8B8,
+                D3DPOOL_DEFAULT, &combinedTexture, NULL);
+	    
+		//create our vertex buffer
+		IDirect3DSurface9* bb;
+		videoOutputDevice->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &bb);
+		D3DSURFACE_DESC desc;
+		bb->GetDesc(&desc);
+		videoOutputDevice->CreateVertexBuffer(6*sizeof(CUSTOMVERTEX), 0, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &vertexBuffer, NULL);
+		CUSTOMVERTEX vertices[] =
+		{
+			{   0.0f,                0.0f,               1.0f, 1.0f, 0.0f, 0.0f, }, // x, y, z, rhw, tu, tv
+			{   (FLOAT)desc.Width,   0.0f,               1.0f, 1.0f, 1.0f, 0.0f, },
+	        {   0.0f,                (FLOAT)desc.Height, 1.0f, 1.0f, 0.0f, 1.0f, },
+	      /*{   (FLOAT)desc.Width,   0.0f,               1.0f, 1.0f, 1.0f, 0.0f, },*/
+			{   (FLOAT)desc.Width,   (FLOAT)desc.Height, 1.0f, 1.0f, 1.0f, 1.0f, },
+	      /*{   0.0f,                (FLOAT)desc.Height, 1.0f, 1.0f, 0.0f, 1.0f, },*/
+		};
+		bb->Release();
+		void* pVertices;
+		vertexBuffer->Lock(0, sizeof(vertices), (void**)&pVertices, 0);
+		memcpy(pVertices, vertices, sizeof(vertices));
+		vertexBuffer->Unlock();
+	}
+}
+
+void AY38900::renderFrame()
+{
+    //render the next frame
+    renderBackground();
+    renderMOBs();
+    for (int i = 0; i < 8; i++)
+        mobs[i].collisionRegister = 0;
+    determineMOBCollisions();
+	combinedTexture->LockRect(0, &combinedBufferLock, NULL, D3DLOCK_DISCARD |  D3DLOCK_NOSYSLOCK);
+    renderBorders();
+    copyBackgroundBufferToStagingArea();
+    copyMOBsToStagingArea();
+    for (int i = 0; i < 8; i++)
+        registers.memory[0x18+i] |= mobs[i].collisionRegister;
+	combinedTexture->UnlockRect(0);
+    markClean();
+}
+
+void AY38900::render()
+{
+	videoOutputDevice->SetTexture(0, combinedTexture);
+	videoOutputDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
+	videoOutputDevice->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
+    videoOutputDevice->SetTextureStageState( 0, D3DTSS_ALPHAOP,   D3DTOP_DISABLE );
+	videoOutputDevice->SetFVF(D3DFVF_CUSTOMVERTEX);
+    videoOutputDevice->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
+	videoOutputDevice->SetStreamSource(0, vertexBuffer, 0, sizeof(CUSTOMVERTEX));
+	videoOutputDevice->DrawPrimitive(D3DPT_TRIANGLESTRIP, 0, 2);
+}
+
+void AY38900::markClean() {
+    //everything has been rendered and is now clean
+    offsetsChanged = FALSE;
+    bordersChanged = FALSE;
+    colorStackChanged = FALSE;
+    colorModeChanged = FALSE;
+    backtab.markClean();
+    gram->markClean();
+    for (int i = 0; i < 8; i++)
+        mobs[i].markClean();
+}
+
+void AY38900::renderBorders()
+{
+    //see if anything has changed to necessitate drawing the borders
+    if (!bordersChanged && (!offsetsChanged || (blockLeft && blockTop)))
+        return;
+
+    //draw the top and bottom borders
+    if (blockTop) {
+        //move the image up 4 pixels and block the top and bottom 4 rows with the border
+        for (UINT8 y = 0; y < 8; y++) {
+            UINT32* buffer0 = ((UINT32*)combinedBufferLock.pBits) + (y*combinedBufferLock.Pitch/4);
+            UINT32* buffer1 = buffer0 + (184*combinedBufferLock.Pitch/4);
+            for (UINT8 x = 0; x < 160; x++) {
+                *buffer0++ = palette[borderColor];
+                *buffer1++ = palette[borderColor];
+            }
+        }
+    }
+    else if (verticalOffset != 0) {
+        //block the top rows of pixels depending on the amount of vertical offset
+        UINT8 numRows = (UINT8)(verticalOffset<<1);
+        for (UINT8 y = 0; y < numRows; y++) {
+            UINT32* buffer0 = ((UINT32*)combinedBufferLock.pBits) + (y*combinedBufferLock.Pitch/4);
+            for (UINT8 x = 0; x < 160; x++)
+                *buffer0++ = palette[borderColor];
+        }
+    }
+
+    //draw the left and right borders
+    if (blockLeft) {
+        //move the image to the left 4 pixels and block the left and right 4 columns with the border
+        for (UINT8 y = 0; y < 192; y++) {
+            UINT32* buffer0 = ((UINT32*)combinedBufferLock.pBits) + (y*combinedBufferLock.Pitch/4);
+            UINT32* buffer1 = buffer0 + 156;
+            for (UINT8 x = 0; x < 4; x++) {
+                *buffer0++ = palette[borderColor];
+                *buffer1++ = palette[borderColor];
+            }
+        }
+    }
+    else if (horizontalOffset != 0) {
+        //block the left columns of pixels depending on the amount of horizontal offset
+        for (UINT8 y = 0; y < 192; y++) { 
+            UINT32* buffer0 = ((UINT32*)combinedBufferLock.pBits) + (y*combinedBufferLock.Pitch/4);
+            for (UINT8 x = 0; x < horizontalOffset; x++) {
+                *buffer0++ = palette[borderColor];
+            }
+        }
+    }
+}
+
+void AY38900::renderMOBs()
+{
+    for (int i = 0; i < 8; i++)
+    {
+        //if the mob did not change shape and it's rendering from GROM (indicating that
+        //the source of its rendering could not have changed), then this MOB does not need
+        //to be re-rendered into its buffer
+        if (!mobs[i].shapeChanged && mobs[i].isGrom)
+            continue;
+
+        //start at this memory location
+        UINT16 firstMemoryLocation = (UINT16)(mobs[i].isGrom
+                ? LOCATION_GROM + (mobs[i].cardNumber << 3)
+                : LOCATION_GRAM + ((mobs[i].cardNumber & 0x3F) << 3));
+
+        //end at this memory location
+        UINT16 lastMemoryLocation = (UINT16)(firstMemoryLocation + 8);
+        if (mobs[i].doubleYResolution)
+            lastMemoryLocation += 8;
+
+        //make the pixels this tall
+        int pixelHeight = (mobs[i].quadHeight ? 4 : 1) * (mobs[i].doubleHeight ? 2 : 1);
+
+        //start at the first line for regular vertical rendering or start at the last line
+        //for vertically mirrored rendering
+        int nextLine = 0;
+        if (mobs[i].verticalMirror)
+            nextLine = (pixelHeight * (mobs[i].doubleYResolution ? 15 : 7));
+        for (UINT16 j = firstMemoryLocation; j < lastMemoryLocation; j++) {
+            if (!mobs[i].shapeChanged && !gram->isCardDirty((UINT16)(j & 0x01FF))) {
+                if (mobs[i].verticalMirror)
+                    nextLine -= pixelHeight;
+                else
+                    nextLine += pixelHeight;
+                continue;
+            }
+
+            //get the next line of pixels
+            UINT16 nextData = (UINT16)(memoryBus->peek(j) & 0xFF);
+
+            //reverse the pixels horizontally if necessary
+            if (mobs[i].horizontalMirror)
+                nextData = (UINT16)((reverse[nextData & 0x0F] << 4) | reverse[(nextData & 0xF0) >> 4]);
+
+            //double them if necessary
+            if (mobs[i].doubleWidth)
+                nextData = (UINT16)((stretch[(nextData & 0xF0) >> 4] << 8) | stretch[nextData & 0x0F]);
+            else
+                nextData <<= 8;
+
+            //lay down as many lines of pixels as necessary
+            for (int k = 0; k < pixelHeight; k++)
+                mobBuffers[i][nextLine++] = nextData;
+
+            if (mobs[i].verticalMirror)
+                nextLine -= (2*pixelHeight);
+        }
+    }
+}
+
+void AY38900::renderBackground()
+{
+    /*
+    if (!backtab.isDirty() && !gram->isDirty() && !colorStackChanged && !colorModeChanged)
+        return;
+    */
+
+    if (colorStackMode)
+        renderColorStackMode();
+    else
+        renderForegroundBackgroundMode();
+}
+
+void AY38900::renderForegroundBackgroundMode()
+{
+    //iterate through all the cards in the backtab
+    for (UINT8 i = 0; i < 240; i++) {
+        //get the next card to render
+        UINT16 nextCard = backtab.peek(LOCATION_BACKTAB+i);
+        BOOL isGrom = (nextCard & 0x0800) == 0;
+        UINT16 memoryLocation = nextCard & 0x01F8;
+
+        //render this card only if this card has changed or if the card points to GRAM
+        //and one of the eight bytes in gram that make up this card have changed
+        if (colorModeChanged || backtab.isDirty(LOCATION_BACKTAB+i) || (!isGrom && gram->isCardDirty(memoryLocation))) {
+            UINT8 fgcolor = (UINT8)((nextCard & 0x0007) | FOREGROUND_BIT);
+            UINT8 bgcolor = (UINT8)(((nextCard & 0x2000) >> 11) | ((nextCard & 0x1600) >> 9));
+
+            Memory* memory = (isGrom ? (Memory*)grom : (Memory*)gram);
+            UINT16 address = memory->getReadAddress()+memoryLocation;
+            UINT8 nextx = (i%20) * 8;
+            UINT8 nexty = (i/20) * 8;
+            for (UINT16 j = 0; j < 8; j++)
+                renderLine((UINT8)memory->peek(address+j), nextx, nexty+j, fgcolor, bgcolor);
+        }
+    }
+}
+
+void AY38900::renderColorStackMode()
+{
+    UINT8 csPtr = 0;
+    //if there are any dirty color advance bits in the backtab, or if
+    //the color stack or the color mode has changed, the whole scene
+    //must be rendered
+    BOOL renderAll = backtab.areColorAdvanceBitsDirty() ||
+        colorStackChanged || colorModeChanged;
+
+    UINT8 nextx = 0;
+    UINT8 nexty = 0;
+    //iterate through all the cards in the backtab
+    for (UINT8 h = 0; h < 240; h++) {
+        UINT16 nextCard = backtab.peek(LOCATION_BACKTAB+h);
+
+        //colored squares mode
+        if ((nextCard & 0x1800) == 0x1000) {
+            if (renderAll || backtab.isDirty(LOCATION_BACKTAB+h)) {
+                UINT8 csColor = (UINT8)registers.memory[0x28 + csPtr];
+                UINT8 color0 = (UINT8)(nextCard & 0x0007);
+                UINT8 color1 = (UINT8)((nextCard & 0x0038) >> 3);
+                UINT8 color2 = (UINT8)((nextCard & 0x01C0) >> 6);
+                UINT8 color3 = (UINT8)(((nextCard & 0x2000) >> 11) |
+                    ((nextCard & 0x0600) >> 9));
+                renderColoredSquares(nextx, nexty,
+                    (color0 == 7 ? csColor : (UINT8)(color0 | FOREGROUND_BIT)),
+                    (color1 == 7 ? csColor : (UINT8)(color1 | FOREGROUND_BIT)),
+                    (color2 == 7 ? csColor : (UINT8)(color2 | FOREGROUND_BIT)),
+                    (color3 == 7 ? csColor : (UINT8)(color3 | FOREGROUND_BIT)));
+            }
+        }
+        //color stack mode
+        else {
+            //advance the color pointer, if necessary
+            if ((nextCard & 0x2000) != 0)
+                csPtr = (UINT8)((csPtr+1) & 0x03);
+
+            BOOL isGrom = (nextCard & 0x0800) == 0;
+            UINT16 memoryLocation = (isGrom ? (nextCard & 0x07F8)
+                : (nextCard & 0x01F8));
+
+            if (renderAll || backtab.isDirty(LOCATION_BACKTAB+h) ||
+                (!isGrom && gram->isCardDirty(memoryLocation))) {
+                UINT8 fgcolor = (UINT8)(((nextCard & 0x1000) >> 9) |
+                    (nextCard & 0x0007) | FOREGROUND_BIT);
+                UINT8 bgcolor = (UINT8)registers.memory[0x28 + csPtr];
+                Memory* memory = (isGrom ? (Memory*)grom : (Memory*)gram);
+                UINT16 address = memory->getReadAddress()+memoryLocation;
+                for (UINT16 j = 0; j < 8; j++)
+                    renderLine((UINT8)memory->peek(address+j), nextx, nexty+j, fgcolor, bgcolor);
+            }
+        }
+        nextx += 8;
+        if (nextx == 160) {
+            nextx = 0;
+            nexty += 8;
+        }
+    }
+}
+
+void AY38900::copyBackgroundBufferToStagingArea()
+{
+    int sourceWidthX = blockLeft ? 152 : (160 - horizontalOffset);
+    int sourceHeightY = blockTop ? 88 : (96 - verticalOffset);
+
+    int nextSourcePixel = (blockLeft ? (8 - horizontalOffset) : 0) +
+        ((blockTop ? (8 - verticalOffset) : 0) * 160);
+    for (int y = 0; y < sourceHeightY; y++) {
+		UINT32* nextPixelStore0 = (UINT32*)combinedBufferLock.pBits;
+		nextPixelStore0 += (y*combinedBufferLock.Pitch)>>1;
+		if (blockTop) nextPixelStore0 += combinedBufferLock.Pitch<<1;
+		if (blockLeft) nextPixelStore0 += 4;
+		UINT32* nextPixelStore1 = nextPixelStore0 + combinedBufferLock.Pitch/4;
+        for (int x = 0; x < sourceWidthX; x++) {
+			UINT32 nextColor = palette[backgroundBuffer[nextSourcePixel+x]];
+			*nextPixelStore0++ = nextColor;
+			*nextPixelStore1++ = nextColor;
+        }
+        nextSourcePixel += 160;
+    }
+}
+
+//copy the offscreen mob buffers to the staging area
+void AY38900::copyMOBsToStagingArea()
+{
+    for (INT8 i = 7; i >= 0; i--) {
+        if (mobs[i].xLocation == 0 || (!mobs[i].flagCollisions && !mobs[i].isVisible))
+            continue;
+
+        BOOL borderCollision = FALSE;
+        BOOL foregroundCollision = FALSE;
+
+        MOBRect* r = mobs[i].getBounds();
+        UINT8 mobPixelHeight = (UINT8)(r->height << 1);
+        UINT8 fgcolor = (UINT8)mobs[i].foregroundColor;
+
+        INT16 leftX = (INT16)(r->x + horizontalOffset);
+        INT16 nextY = (INT16)((r->y + verticalOffset) << 1);
+        for (UINT8 y = 0; y < mobPixelHeight; y++) {
+            for (UINT8 x = 0; x < r->width; x++) {
+                //if this mob pixel is not on, then our life has no meaning
+                if ((mobBuffers[i][y] & (0x8000 >> x)) == 0)
+                    continue;
+
+                //if the next pixel location is on the border, then we
+                //have a border collision and we can ignore painting it
+                int nextX = leftX + x;
+                if (nextX < (blockLeft ? 8 : 0) || nextX > 158 ||
+                        nextY < (blockTop ? 16 : 0) || nextY > 191) {
+                    borderCollision = TRUE;
+                    continue;
+                }
+
+                //check for foreground collision
+                UINT8 currentPixel = backgroundBuffer[(r->x+x)+ ((r->y+(y/2))*160)];
+                if ((currentPixel & FOREGROUND_BIT) != 0) {
+                    foregroundCollision = TRUE;
+                    if (mobs[i].behindForeground)
+                        continue;
+                }
+
+                if (mobs[i].isVisible) {
+					UINT32* nextPixel = (UINT32*)combinedBufferLock.pBits;
+					nextPixel += leftX - (blockLeft ? 4 : 0) + x;
+					nextPixel += (nextY - (blockTop ? 8 : 0)) * (combinedBufferLock.Pitch/4);
+					*nextPixel = palette[fgcolor | (currentPixel & FOREGROUND_BIT)];
+                }
+            }
+            nextY++;
+        }
+
+        //update the collision bits
+        if (mobs[i].flagCollisions) {
+            if (foregroundCollision)
+                mobs[i].collisionRegister |= 0x0100;
+            if (borderCollision)
+                mobs[i].collisionRegister |= 0x0200;
+        }
+    }
+}
+
+void AY38900::renderLine(UINT8 nextbyte, int x, int y, UINT8 fgcolor, UINT8 bgcolor)
+{
+    UINT8* nextTargetPixel = backgroundBuffer + x + (y*160);
+    *nextTargetPixel++ = (nextbyte & 0x80) != 0 ? fgcolor : bgcolor;
+    *nextTargetPixel++ = (nextbyte & 0x40) != 0 ? fgcolor : bgcolor;
+    *nextTargetPixel++ = (nextbyte & 0x20) != 0 ? fgcolor : bgcolor;
+    *nextTargetPixel++ = (nextbyte & 0x10) != 0 ? fgcolor : bgcolor;
+    *nextTargetPixel++ = (nextbyte & 0x08) != 0 ? fgcolor : bgcolor;
+    *nextTargetPixel++ = (nextbyte & 0x04) != 0 ? fgcolor : bgcolor;
+    *nextTargetPixel++ = (nextbyte & 0x02) != 0 ? fgcolor : bgcolor;
+    *nextTargetPixel++ = (nextbyte & 0x01) != 0 ? fgcolor : bgcolor;
+}
+
+void AY38900::renderColoredSquares(int x, int y, UINT8 color0, UINT8 color1,
+    UINT8 color2, UINT8 color3) {
+    int topLeftPixel = x + (y*160);
+    int topRightPixel = topLeftPixel+4;
+    int bottomLeftPixel = topLeftPixel+640;
+    int bottomRightPixel = bottomLeftPixel+4;
+
+    for (UINT8 w = 0; w < 4; w++) {
+        for (UINT8 i = 0; i < 4; i++) {
+            backgroundBuffer[topLeftPixel++] = color0;
+            backgroundBuffer[topRightPixel++] = color1;
+            backgroundBuffer[bottomLeftPixel++] = color2;
+            backgroundBuffer[bottomRightPixel++] = color3;
+        }
+        topLeftPixel += 156;
+        topRightPixel += 156;
+        bottomLeftPixel += 156;
+        bottomRightPixel += 156;
+    }
+}
+
+void AY38900::determineMOBCollisions()
+{
+    //check MOB to MOB collisions
+    for (int i = 0; i < 7; i++) {
+        if (mobs[i].xLocation == 0 || !mobs[i].flagCollisions)
+            continue;
+
+        for (int j = i+1; j < 8; j++) {
+            if (mobs[j].xLocation == 0 || !mobs[j].flagCollisions)
+                continue;
+
+            if (mobsCollide(i, j)) {
+                mobs[i].collisionRegister |= (1 << j);
+                mobs[j].collisionRegister |= (1 << i);
+            }
+        }
+    }
+}
+
+BOOL AY38900::mobsCollide(int mobNum0, int mobNum1)
+{
+    MOBRect* r0;
+    r0 = mobs[mobNum0].getBounds();
+    MOBRect* r1;
+    r1 = mobs[mobNum1].getBounds();
+    if (!r0->intersects(r1))
+        return FALSE;
+
+    //iterate over the intersecting bits to see if any touch
+    int startingX = MAX(r0->x, r1->x);
+    int startingY = MAX(r0->y, r1->y);
+    int offsetYr0 = (startingY - r0->y) * 2;
+    int offsetYr1 = (startingY - r1->y) * 2;
+    int overlappingHeight = (MIN(r0->y + r0->height, r1->y + r1->height) - startingY) * 2;
+    int offsetXr0 = startingX - r0->x;
+    int offsetXr1 = startingX - r1->x;
+
+    for (int y = 0; y < overlappingHeight; y++) {
+        if (((mobBuffers[mobNum0][offsetYr0 + y] << offsetXr0) & (mobBuffers[mobNum1][offsetYr1 + y] << offsetXr1)) != 0)
+            return TRUE;
+    }
+
+    return FALSE;
+}
+
+/*
+void AY38900::determineMOBCollisions() {
+    //check mob to mob collisions
+    for (int i = 0; i < 7; i++) {
+        if (mobs[i].xLocation == 0 || !mobs[i].flagCollisions)
+            continue;
+
+        for (int j = i+1; j < 8; j++) {
+            if (mobs[j].xLocation == 0 || !mobs[j].flagCollisions)
+                continue;
+
+            if (mobsCollide(i, j)) {
+                mobs[i].collisionRegister |= (UINT8)(1 << j);
+                mobs[j].collisionRegister |= (UINT8)(1 << i);
+            }
+        }
+    }
+}
+
+BOOL AY38900::mobsCollide(int mobNum0, int mobNum1) {
+    MOBRect* r0;
+    r0 = mobs[mobNum0].getBounds();
+    MOBRect* r1;
+    r1 = mobs[mobNum1].getBounds();
+    if (!r0->intersects(r1))
+        return FALSE;
+
+    //iterate over the intersecting bits to see if any touch
+    int x0 = MAX(r0->x, r1->x);
+    int y0 = MAX(r0->y, r1->y);
+    int r0y = 2*(y0-r0->y);
+    int r1y = 2*(y0-r1->y);
+    int width = MIN(r0->x+r0->width, r1->x+r1->width) - x0;
+    int height = (MIN(r0->y+r0->height, r1->y+r1->height) - y0) * 2;
+    for (int x = 0; x < width; x++) {
+        for (int y = 0; y < height; y++) {
+            if (mobBuffers[mobNum0][x0-r0->x+x][r0y+y] &&
+                mobBuffers[mobNum1][x0-r1->x+x][r1y+y])
+                return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+*/
 
 /*
 void AY38900::renderRow(int rowNum) {
@@ -300,147 +1144,7 @@ void AY38900::renderRow(int rowNum) {
 }
 */
 
-void AY38900::renderFrame() {
-    //render the next frame
-    if (somethingChanged()) {
-        renderBackground();
-        renderMOBs();
-        for (int i = 0; i < 8; i++)
-            mobs[i].collisionRegister = 0;
-        determineMOBCollisions();
-        markClean();
-    }
-}
-
-void AY38900::setVideoOutputDevice(IDirect3DDevice9* vod)
-{
-	if (this->videoOutputDevice != NULL) {
-		if (vertexBuffer != NULL) {
-			vertexBuffer->Release();
-			vertexBuffer = NULL;
-		}
-		if (combinedTexture != NULL) {
-			combinedTexture->Release();
-			combinedTexture = NULL;
-		}
-	}
-
-    this->videoOutputDevice = vod;
-
-	if (this->videoOutputDevice != NULL) {
-		//obtain the surface we desire
-		videoOutputDevice->CreateTexture(160, 192, 1, D3DUSAGE_DYNAMIC, D3DFMT_X8R8G8B8,
-                D3DPOOL_DEFAULT, &combinedTexture, NULL);
-	    
-		//create our vertex buffer
-		IDirect3DSurface9* bb;
-		videoOutputDevice->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &bb);
-		D3DSURFACE_DESC desc;
-		bb->GetDesc(&desc);
-		videoOutputDevice->CreateVertexBuffer(6*sizeof(CUSTOMVERTEX), 0, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &vertexBuffer, NULL);
-		CUSTOMVERTEX vertices[] =
-		{
-			{   0.0f,                0.0f,               1.0f, 1.0f, 0.0f, 0.0f, }, // x, y, z, rhw, tu, tv
-			{   (FLOAT)desc.Width,   0.0f,               1.0f, 1.0f, 1.0f, 0.0f, },
-			{   0.0f,                (FLOAT)desc.Height, 1.0f, 1.0f, 0.0f, 1.0f, },
-			{   (FLOAT)desc.Width,   0.0f,               1.0f, 1.0f, 1.0f, 0.0f, },
-			{   (FLOAT)desc.Width,   (FLOAT)desc.Height, 1.0f, 1.0f, 1.0f, 1.0f, },
-			{   0.0f,                (FLOAT)desc.Height, 1.0f, 1.0f, 0.0f, 1.0f, },
-		};
-		bb->Release();
-		void* pVertices;
-		vertexBuffer->Lock(0, sizeof(vertices), (void**)&pVertices, 0);
-		memcpy(pVertices, vertices, sizeof(vertices));
-		vertexBuffer->Unlock();
-	}
-}
-
-void AY38900::render()
-{
-	combinedTexture->LockRect(0, &combinedBufferLock, NULL, D3DLOCK_DISCARD |  D3DLOCK_NOSYSLOCK);
-    renderBorders();
-    copyBackgroundBufferToStagingArea();
-    copyMOBsToStagingArea();
-    for (int i = 0; i < 8; i++)
-        registers.memory[0x18+i] |= mobs[i].collisionRegister;
-	combinedTexture->UnlockRect(0);
-	videoOutputDevice->SetTexture(0, combinedTexture);
-	videoOutputDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
-	videoOutputDevice->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-    videoOutputDevice->SetTextureStageState( 0, D3DTSS_ALPHAOP,   D3DTOP_DISABLE );
-	videoOutputDevice->SetFVF(D3DFVF_CUSTOMVERTEX);
-    videoOutputDevice->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
-	videoOutputDevice->SetStreamSource(0, vertexBuffer, 0, sizeof(CUSTOMVERTEX));
-	videoOutputDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 2);
-}
-
-BOOL AY38900::somethingChanged() {
-    return (offsetsChanged || bordersChanged || colorStackChanged ||
-        colorModeChanged || backtab.isDirty() || gram->isDirty() ||
-        mobs[0].changed || mobs[1].changed ||
-        mobs[2].changed || mobs[3].changed ||
-        mobs[4].changed || mobs[5].changed ||
-        mobs[6].changed || mobs[7].changed);
-}
-
-void AY38900::markClean() {
-    //everything has been rendered and is now clean
-    offsetsChanged = false;
-    bordersChanged = false;
-    colorStackChanged = false;
-    colorModeChanged = false;
-    backtab.markClean();
-    gram->markClean();
-    for (int i = 0; i < 8; i++)
-        mobs[i].markClean();
-}
-
-void AY38900::renderBorders() {
-    /*
-    if (!bordersChanged && (!offsetsChanged || (blockLeft && blockTop)))
-        return;
-    */
-
-    //draw the borders, if necessary
-    if (blockTop) {
-        for (UINT8 y = 0; y < 8; y++) {
-            UINT32* buffer0 = ((UINT32*)combinedBufferLock.pBits) + (y*combinedBufferLock.Pitch/4);
-            UINT32* buffer1 = buffer0 + (184*combinedBufferLock.Pitch/4);
-            for (UINT8 x = 0; x < 160; x++) {
-                *buffer0++ = palette[borderColor];
-                *buffer1++ = palette[borderColor];
-            }
-        }
-    }
-    else if (verticalOffset != 0) {
-        UINT8 numRows = (UINT8)(verticalOffset<<1);
-        for (UINT8 y = 0; y < numRows; y++) {
-            UINT32* buffer0 = ((UINT32*)combinedBufferLock.pBits) + (y*combinedBufferLock.Pitch/4);
-            for (UINT8 x = 0; x < 160; x++)
-                *buffer0++ = palette[borderColor];
-        }
-    }
-
-    if (blockLeft) {
-        for (UINT8 y = 0; y < 192; y++) {
-            UINT32* buffer0 = ((UINT32*)combinedBufferLock.pBits) + (y*combinedBufferLock.Pitch/4);
-            UINT32* buffer1 = buffer0 + 156;
-            for (UINT8 x = 0; x < 4; x++) {
-                *buffer0++ = palette[borderColor];
-                *buffer1++ = palette[borderColor];
-            }
-        }
-    }
-    else if (horizontalOffset != 0) {
-        for (UINT8 y = 0; y < 192; y++) { 
-            UINT32* buffer0 = ((UINT32*)combinedBufferLock.pBits) + (y*combinedBufferLock.Pitch/4);
-            for (UINT8 x = 0; x < horizontalOffset; x++) {
-                *buffer0++ = palette[borderColor];
-            }
-        }
-    }
-}
-
+/*
 void AY38900::renderMOBs()
 {
     MOBRect* r;
@@ -475,9 +1179,6 @@ void AY38900::renderMOBs()
             //if (!mobs[i].changed && !gram->isDirty(nextMemoryLocation))
             //continue;
 
-            /*
-                        nextData = memoryBus.peek(nextMemoryLocation);
-            */
             nextData = (mobs[i].isGrom
                 ? (nextMemoryLocation >= (int)grom->getSize()
                 ? (UINT16)0xFFFF : grom->peek(nextMemoryLocation))
@@ -532,265 +1233,5 @@ void AY38900::renderMOBs()
 
     }
 }
+*/
 
-void AY38900::renderBackground() {
-    if (backtab.isDirty() || gram->isDirty() || colorStackChanged ||
-        colorModeChanged) {
-        if (colorStackMode)
-            renderColorStackMode();
-        else
-            renderForegroundBackgroundMode();
-    }
-}
-
-void AY38900::renderForegroundBackgroundMode()
-{
-    UINT8 nextx = 0;
-    UINT8 nexty = 0;
-    for (UINT8 i = 0; i < 240; i++) {
-        UINT16 nextCard = backtab.peek((0x200+i));
-        BOOL isGrom = (nextCard & 0x0800) == 0;
-        BOOL renderAll = backtab.isDirty(0x200+i) || colorModeChanged;
-        UINT16 memoryLocation = nextCard & 0x01F8;
-
-        if (renderAll || (!isGrom && gram->isCardDirty(memoryLocation))) {
-            UINT8 fgcolor = (UINT8)((nextCard & 0x0007) | FOREGROUND_BIT);
-            UINT8 bgcolor = (UINT8)(((nextCard & 0x2000) >> 11) |
-                ((nextCard & 0x1600) >> 9));
-
-            Memory* memory = (isGrom ? (Memory*)grom : (Memory*)gram);
-            UINT16 address = memory->getAddress()+memoryLocation;
-            for (UINT16 j = 0; j < 8; j++)
-                renderLine((UINT8)memory->peek(address+j), nextx, nexty+j, fgcolor, bgcolor);
-        }
-        nextx += 8;
-        if (nextx == 160) {
-            nextx = 0;
-            nexty += 8;
-        }
-    }
-}
-
-void AY38900::renderColorStackMode() {
-    UINT8 csPtr = 0;
-    //if there are any dirty color advance bits in the backtab, or if
-    //the color stack or the color mode has changed, the whole scene
-    //must be rendered
-    BOOL renderAll = backtab.areColorAdvanceBitsDirty() ||
-        colorStackChanged || colorModeChanged;
-
-    UINT8 nextx = 0;
-    UINT8 nexty = 0;
-    for (UINT8 h = 0; h < 240; h++) {
-        UINT16 nextCard = backtab.peek(0x200+h);
-
-        //_ASSERT(_CrtCheckMemory());
-        //colored squares mode
-        if ((nextCard & 0x1800) == 0x1000) {
-            if (renderAll || backtab.isDirty(0x200+h)) {
-                UINT8 csColor = (UINT8)registers.memory[0x28 + csPtr];
-                UINT8 color0 = (UINT8)(nextCard & 0x0007);
-                UINT8 color1 = (UINT8)((nextCard & 0x0038) >> 3);
-                UINT8 color2 = (UINT8)((nextCard & 0x01C0) >> 6);
-                UINT8 color3 = (UINT8)(((nextCard & 0x2000) >> 11) |
-                    ((nextCard & 0x0600) >> 9));
-                renderColoredSquares(nextx, nexty,
-                    (color0 == 7 ? csColor : (UINT8)(color0 | FOREGROUND_BIT)),
-                    (color1 == 7 ? csColor : (UINT8)(color1 | FOREGROUND_BIT)),
-                    (color2 == 7 ? csColor : (UINT8)(color2 | FOREGROUND_BIT)),
-                    (color3 == 7 ? csColor : (UINT8)(color3 | FOREGROUND_BIT)));
-            }
-        }
-        //color stack mode
-        else {
-            //advance the color pointer, if necessary
-            if ((nextCard & 0x2000) != 0)
-                csPtr = (UINT8)((csPtr+1) & 0x03);
-
-            BOOL isGrom = (nextCard & 0x0800) == 0;
-            UINT16 memoryLocation = (isGrom ? (nextCard & 0x07F8)
-                : (nextCard & 0x01F8));
-
-            if (renderAll || backtab.isDirty(0x200+h) ||
-                (!isGrom && gram->isCardDirty(memoryLocation))) {
-                UINT8 fgcolor = (UINT8)(((nextCard & 0x1000) >> 9) |
-                    (nextCard & 0x0007) | FOREGROUND_BIT);
-                UINT8 bgcolor = (UINT8)registers.memory[0x28 + csPtr];
-                Memory* memory = (isGrom ? (Memory*)grom : (Memory*)gram);
-                UINT16 address = memory->getAddress()+memoryLocation;
-                for (UINT16 j = 0; j < 8; j++)
-                    renderLine((UINT8)memory->peek(address+j), nextx, nexty+j, fgcolor, bgcolor);
-            }
-        }
-        nextx += 8;
-        if (nextx == 160) {
-            nextx = 0;
-            nexty += 8;
-        }
-    }
-}
-
-void AY38900::copyBackgroundBufferToStagingArea()
-{
-    int sourceWidthX = blockLeft ? 152 : (160 - horizontalOffset);
-    int sourceHeightY = blockTop ? 88 : (96 - verticalOffset);
-
-    int nextSourcePixel = (blockLeft ? (8 - horizontalOffset) : 0) +
-        ((blockTop ? (8 - verticalOffset) : 0) * 160);
-    for (int y = 0; y < sourceHeightY; y++) {
-		UINT32* nextPixelStore0 = (UINT32*)combinedBufferLock.pBits;
-		nextPixelStore0 += (y*combinedBufferLock.Pitch)>>1;
-		if (blockTop) nextPixelStore0 += combinedBufferLock.Pitch<<1;
-		if (blockLeft) nextPixelStore0 += 4;
-		UINT32* nextPixelStore1 = nextPixelStore0 + combinedBufferLock.Pitch/4;
-        for (int x = 0; x < sourceWidthX; x++) {
-			UINT32 nextColor = palette[backgroundBuffer[nextSourcePixel+x]];
-			*nextPixelStore0++ = nextColor;
-			*nextPixelStore1++ = nextColor;
-        }
-        nextSourcePixel += 160;
-    }
-}
-
-//copy the offscreen mob buffers to the staging area
-void AY38900::copyMOBsToStagingArea()
-{
-    for (INT8 i = 7; i >= 0; i--) {
-        if (mobs[i].xLocation == 0 ||
-            (!mobs[i].flagCollisions && !mobs[i].isVisible))
-            continue;
-
-        BOOL borderCollision = false;
-        BOOL foregroundCollision = false;
-
-        MOBRect* r = mobs[i].getBounds();
-        UINT8 mobPixelHeight = (UINT8)(r->height << 1);
-        UINT8 fgcolor = (UINT8)mobs[i].foregroundColor;
-
-        short leftX = (short)(r->x + horizontalOffset);
-        short nextY = (short)((r->y + verticalOffset) << 1);
-        for (UINT8 y = 0; y < mobPixelHeight; y++) {
-            for (UINT8 x = 0; x < r->width; x++) {
-                //if this mob pixel is not on, then our life has no meaning
-                if (!mobBuffers[i][x][y])
-                    continue;
-
-                //if the next pixel location is on the border, then we
-                //have a border collision and we can ignore painting it
-                int nextX = leftX + x;
-                if (nextX < (blockLeft ? 8 : 0) || nextX > 158 ||
-                    nextY < (blockTop ? 16 : 0) || nextY > 191) {
-                    borderCollision = true;
-                    continue;
-                }
-
-                //check for foreground collision
-                UINT8 currentPixel = backgroundBuffer[(r->x+x)+ ((r->y+(y/2))*160)];
-                if ((currentPixel & FOREGROUND_BIT) != 0) {
-                    foregroundCollision = true;
-                    if (mobs[i].behindForeground)
-                        continue;
-                }
-
-                if (mobs[i].isVisible) {
-					UINT32* nextPixel = (UINT32*)combinedBufferLock.pBits;
-					nextPixel += leftX - (blockLeft ? 4 : 0) + x;
-					nextPixel += (nextY - (blockTop ? 8 : 0)) * (combinedBufferLock.Pitch/4);
-					*nextPixel = palette[fgcolor | (currentPixel & FOREGROUND_BIT)];
-					/*
-					((UINT32*)combinedBufferLock.pBits)[leftX - (blockLeft ? 4 : 0) + x + ((nextY - (blockTop ? 8 : 0))*(combinedBufferLock.Pitch/4))] = 
-                        palette[fgcolor | (currentPixel & FOREGROUND_BIT)];
-				    */
-                }
-            }
-            //rowPixelIndex += 160;
-            nextY++;
-        }
-
-        //update the collision bits
-        if (mobs[i].flagCollisions) {
-            if (foregroundCollision)
-                mobs[i].collisionRegister |= 0x0100;
-            if (borderCollision)
-                mobs[i].collisionRegister |= 0x0200;
-        }
-    }
-}
-
-void AY38900::renderLine(UINT8 nextbyte, int x, int y, UINT8 fgcolor, UINT8 bgcolor)
-{
-    int nextTargetPixel = x + (y*160);
-    backgroundBuffer[nextTargetPixel++] = (nextbyte & 0x80) != 0 ? fgcolor : bgcolor;
-    backgroundBuffer[nextTargetPixel++] = (nextbyte & 0x40) != 0 ? fgcolor : bgcolor;
-    backgroundBuffer[nextTargetPixel++] = (nextbyte & 0x20) != 0 ? fgcolor : bgcolor;
-    backgroundBuffer[nextTargetPixel++] = (nextbyte & 0x10) != 0 ? fgcolor : bgcolor;
-    backgroundBuffer[nextTargetPixel++] = (nextbyte & 0x08) != 0 ? fgcolor : bgcolor;
-    backgroundBuffer[nextTargetPixel++] = (nextbyte & 0x04) != 0 ? fgcolor : bgcolor;
-    backgroundBuffer[nextTargetPixel++] = (nextbyte & 0x02) != 0 ? fgcolor : bgcolor;
-    backgroundBuffer[nextTargetPixel++] = (nextbyte & 0x01) != 0 ? fgcolor : bgcolor;
-}
-
-void AY38900::renderColoredSquares(int x, int y, UINT8 color0, UINT8 color1,
-    UINT8 color2, UINT8 color3) {
-    int topLeftPixel = x + (y*160);
-    int topRightPixel = topLeftPixel+4;
-    int bottomLeftPixel = topLeftPixel+640;
-    int bottomRightPixel = bottomLeftPixel+4;
-
-    for (UINT8 w = 0; w < 4; w++) {
-        for (UINT8 i = 0; i < 4; i++) {
-            backgroundBuffer[topLeftPixel++] = color0;
-            backgroundBuffer[topRightPixel++] = color1;
-            backgroundBuffer[bottomLeftPixel++] = color2;
-            backgroundBuffer[bottomRightPixel++] = color3;
-        }
-        topLeftPixel += 156;
-        topRightPixel += 156;
-        bottomLeftPixel += 156;
-        bottomRightPixel += 156;
-    }
-}
-
-void AY38900::determineMOBCollisions() {
-    //check mob to mob collisions
-    for (int i = 0; i < 7; i++) {
-        if (mobs[i].xLocation == 0 || !mobs[i].flagCollisions)
-            continue;
-
-        for (int j = i+1; j < 8; j++) {
-            if (mobs[j].xLocation == 0 || !mobs[j].flagCollisions)
-                continue;
-
-            if (mobsCollide(i, j)) {
-                mobs[i].collisionRegister |= (UINT8)(1 << j);
-                mobs[j].collisionRegister |= (UINT8)(1 << i);
-            }
-        }
-    }
-}
-
-BOOL AY38900::mobsCollide(int mobNum0, int mobNum1) {
-    MOBRect* r0;
-    r0 = mobs[mobNum0].getBounds();
-    MOBRect* r1;
-    r1 = mobs[mobNum1].getBounds();
-    if (!r0->intersects(r1))
-        return false;
-
-    //iterate over the intersecting bits to see if any touch
-    int x0 = MAX(r0->x, r1->x);
-    int y0 = MAX(r0->y, r1->y);
-    int r0y = 2*(y0-r0->y);
-    int r1y = 2*(y0-r1->y);
-    int width = MIN(r0->x+r0->width, r1->x+r1->width) - x0;
-    int height = (MIN(r0->y+r0->height, r1->y+r1->height) - y0) * 2;
-    for (int x = 0; x < width; x++) {
-        for (int y = 0; y < height; y++) {
-            if (mobBuffers[mobNum0][x0-r0->x+x][r0y+y] &&
-                mobBuffers[mobNum1][x0-r1->x+x][r1y+y])
-                return true;
-        }
-    }
-
-    return false;
-}

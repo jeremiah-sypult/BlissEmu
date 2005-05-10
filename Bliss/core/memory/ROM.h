@@ -28,13 +28,16 @@ public:
 
     //functions to implement the Memory interface
 	virtual void reset() {}
-    UINT16 getSize();
-    UINT16 getAddress();
-    UINT16 getReadAddressMask();
-    UINT16 getWriteAddressMask();
     UINT8  getByteWidth();
 
+    UINT16 getReadSize();
+    UINT16 getReadAddress();
+    UINT16 getReadAddressMask();
     virtual UINT16 peek(UINT16 location);
+
+    UINT16 getWriteSize();
+    UINT16 getWriteAddress();
+    UINT16 getWriteAddressMask();
     virtual void poke(UINT16 location, UINT16 value);
 
 private:

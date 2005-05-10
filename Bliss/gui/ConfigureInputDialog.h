@@ -26,6 +26,7 @@ private:
     InputProducerManager* manager;
     GUID configuredProducerGuid;
     INT32 configuredEnum;
+    clock_t firstInputMark;
 
     DECLARE_DYNAMIC(ConfigureInputDialog);
     DECLARE_MESSAGE_MAP();

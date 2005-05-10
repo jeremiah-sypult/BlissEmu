@@ -50,7 +50,8 @@ class MOB
         BOOL    verticalMirror;
         BOOL    behindForeground;
         BOOL    boundsChanged;
-        BOOL    changed;
+        BOOL    shapeChanged;
+        BOOL    colorChanged;
         MOBRect boundingRectangle;
 
 };

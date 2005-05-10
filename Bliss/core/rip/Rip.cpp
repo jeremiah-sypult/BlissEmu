@@ -123,7 +123,7 @@ Rip* Rip::LoadBin(const CHAR* filename, const CHAR* configFile)
         }
         ROM* nextRom = rip->GetROM(i);
         nextRom->load(image+offset);
-        offset += nextRom->getByteWidth() * nextRom->getSize();
+        offset += nextRom->getByteWidth() * nextRom->getReadSize();
     }
 
     delete[] image;
@@ -663,7 +663,7 @@ Rip* Rip::LoadZip(const CHAR* filename, const CHAR* configFile)
         for (UINT16 i = 0; i < romCount; i++) {
             ROM* nextRom = rip->GetROM(i);
             nextRom->load(image+offset);
-            offset += nextRom->getByteWidth() * nextRom->getSize();
+            offset += nextRom->getByteWidth() * nextRom->getReadSize();
         }
 
         delete[] image;
@@ -733,11 +733,11 @@ BOOL Rip::SaveRip(const CHAR* filename)
         UINT16 byteWidth = (nextMem->getBitWidth()+7)/8;
 
         //calculate the size of the RAM record
-        int recordSize = 1 +                    //flags
-                1 +                             //more flags
-                2 +                             //address
-                2 +                             //size
-                byteWidth +                     //reset value
+        int recordSize = 1 +                     //flags
+                1 +                              //more flags
+                2 +                              //address
+                2 +                              //size
+                byteWidth +                      //reset value
                 (readMask != 0xFFFF ? 2 : 0) +   //read mask
                 (writeMask != 0xFFFF ? 2 : 0) +  //write mask
                 0;                               //banking not supported just yet
@@ -752,10 +752,10 @@ BOOL Rip::SaveRip(const CHAR* filename)
         fputc(nextMem->getBitWidth()-1, file);
 
         //address
-        fwriteUINT16(file, nextMem->getAddress());
+        fwriteUINT16(file, nextMem->getReadAddress());
 
         //size
-        fwriteUINT16(file, nextMem->getSize());
+        fwriteUINT16(file, nextMem->getReadSize());
 
         //reset value, always zero
         for (UINT16 k = 0; k < byteWidth; k++)
@@ -779,7 +779,7 @@ BOOL Rip::SaveRip(const CHAR* filename)
         //calculate the size of the ROM record
         UINT16 readMask = nextMem->getReadAddressMask();
         UINT16 byteWidth = nextMem->getByteWidth();
-        UINT16 memSize = nextMem->getSize();
+        UINT16 memSize = nextMem->getReadSize();
         int recordSize = 1 +                     //flags
                 1 +                              //more flags
                 2 +                              //address
@@ -796,7 +796,7 @@ BOOL Rip::SaveRip(const CHAR* filename)
         fputc((byteWidth*8)-1, file);
 
         //address
-        UINT16 address = nextMem->getAddress();
+        UINT16 address = nextMem->getReadAddress();
         fwriteUINT16(file, address);
 
         //ROM image

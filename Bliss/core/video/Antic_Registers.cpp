@@ -11,12 +11,12 @@ void Antic_Registers::init(Antic* a)
     antic = a;
 }
 
-UINT16 Antic_Registers::getSize()
+UINT16 Antic_Registers::getReadSize()
 {
     return 0x10;
 }
 
-UINT16 Antic_Registers::getAddress()
+UINT16 Antic_Registers::getReadAddress()
 {
     return 0xD400;
 }
@@ -24,6 +24,16 @@ UINT16 Antic_Registers::getAddress()
 UINT16 Antic_Registers::getReadAddressMask()
 {
     return 0xFE0F;
+}
+
+UINT16 Antic_Registers::getWriteSize()
+{
+    return 0x10;
+}
+
+UINT16 Antic_Registers::getWriteAddress()
+{
+    return 0xD400;
 }
 
 UINT16 Antic_Registers::getWriteAddressMask()

@@ -19,7 +19,10 @@ BEGIN_MESSAGE_MAP(BlissOptionsDialog, CDialog)
     ON_NOTIFY(NM_DBLCLK, IDC_OPTIONSLIST, BlissOptionsDialog::OnConfigureInput)
     ON_NOTIFY(NM_RETURN, IDC_OPTIONSLIST, BlissOptionsDialog::OnConfigureInput)
     ON_COMMAND(IDOK, BlissOptionsDialog::OnOk)
-    ON_WM_MBUTTONDBLCLK()
+    ON_COMMAND(IDCONFIGUREALL, BlissOptionsDialog::OnConfigureAll)
+    ON_COMMAND(IDADDBINDING, BlissOptionsDialog::OnAddBinding)
+    ON_COMMAND(IDRESET, BlissOptionsDialog::OnReset)
+//    ON_WM_MBUTTONDBLCLK()
     ON_WM_DESTROY()
 END_MESSAGE_MAP()
 
@@ -28,9 +31,9 @@ BlissOptionsDialog::BlissOptionsDialog(CWnd* parent)
   configureInputDialog(NULL),
   manager(NULL)
 {
-  bindings[0] = NULL;
-  bindings[1] = NULL;
-  bindings[2] = NULL;
+    bindings[0] = NULL;
+    bindings[1] = NULL;
+    bindings[2] = NULL;
 }
 
 void BlissOptionsDialog::OnDestroy()
@@ -61,6 +64,9 @@ void BlissOptionsDialog::OnDestroy()
 void BlissOptionsDialog::OnShowWindow(BOOL b, UINT i)
 {
     CDialog::OnShowWindow(b, i);
+
+    HICON hIcon = theApp.LoadIcon(IDR_MAINFRAME);
+    SetIcon(hIcon, TRUE);
 
     CenterWindow();
     
@@ -144,23 +150,7 @@ void BlissOptionsDialog::OnSelectionChanged(NMHDR*, LRESULT*)
         list->InsertItem(&nextItem);
 
         //display what the binding is
-        InputProducer* producer = bindings[id][i].inputProducer;
-        if (producer == NULL) {
-            list->SetItemText(i, 1, "<not bound>");
-            continue;
-        }
-        INT32 e = bindings[id][i].inputEnum;
-        if (e == -1) {
-            list->SetItemText(i, 1, "<not bound>");
-            continue;
-        }
-
-        CHAR* tmp = new CHAR[strlen(producer->getName()) + strlen(producer->getInputName(e)) + 2];
-        strcpy(tmp, producer->getName());
-        strcat(tmp, ".");
-        strcat(tmp, producer->getInputName(e));
-        list->SetItemText(i, 1, tmp);
-        delete[] tmp;
+        SetInputText(i, bindings[id][i].inputProducer, bindings[id][i].inputEnum);
     }
 }
 
@@ -223,62 +213,129 @@ void BlissOptionsDialog::LoadConfiguredBindings(InputConsumer* inputConsumer)
 
 void BlissOptionsDialog::OnConfigureInput(NMHDR*, LRESULT*)
 {
+    OnAddBinding();
+}
+
+void BlissOptionsDialog::OnConfigureAll()
+{
+    InputConsumer* inputConsumer = GetSelectedInputConsumer();
+    if (inputConsumer == NULL)
+        return;
+
+    CListCtrl* list = GetListCtrl();
+    int count = list->GetItemCount();
+    for (int i = 0; i < count; i++) {
+        list->SetItemState(i, LVIS_FOCUSED| LVIS_SELECTED, LVIS_FOCUSED| LVIS_SELECTED);
+        InputConsumerObject* inputObject = GetSelectedInputObject();
+        if (inputObject == NULL)
+            continue;
+
+        if (!ConfigureInput(inputConsumer, inputObject))
+            return;
+    }
+}
+
+void BlissOptionsDialog::OnAddBinding()
+{
+    InputConsumer* inputConsumer = GetSelectedInputConsumer();
+    if (inputConsumer == NULL)
+        return;
+
+    InputConsumerObject* inputObject = GetSelectedInputObject();
+    if (inputObject == NULL)
+        return;
+
+    ConfigureInput(inputConsumer, inputObject);
+}
+
+InputConsumer* BlissOptionsDialog::GetSelectedInputConsumer()
+{
     CTreeCtrl* tree = GetTreeCtrl();
     TVITEM selectedTreeItem;
     memset(&selectedTreeItem, 0, sizeof(TVITEM));
     selectedTreeItem.mask = TVIF_TEXT | TVIF_PARAM;
     selectedTreeItem.hItem = tree->GetSelectedItem();
     if (!tree->GetItem(&selectedTreeItem))
-        return;
+        return NULL;
 
-    InputConsumer* inputConsumer = (InputConsumer*)selectedTreeItem.lParam;
-    if (inputConsumer == NULL)
-        return;
+    return (InputConsumer*)selectedTreeItem.lParam;
+}
 
+InputConsumerObject* BlissOptionsDialog::GetSelectedInputObject()
+{
     CListCtrl* list = GetListCtrl();
     LVITEM selectedItem;
     memset(&selectedItem, 0, sizeof(TVITEM));
     selectedItem.mask = LVIF_PARAM | LVIF_TEXT;
     POSITION pos = list->GetFirstSelectedItemPosition();
     if (pos == NULL)
-        return;
+        return NULL;
     selectedItem.iItem = list->GetNextSelectedItem(pos);
     if (!list->GetItem(&selectedItem))
-        return;
+        return NULL;
 
-    InputConsumerObject* inputObject = (InputConsumerObject*)selectedItem.lParam;
-    if (inputObject == NULL)
-        return;
+    return (InputConsumerObject*)selectedItem.lParam;
+}
 
+BOOL BlissOptionsDialog::ConfigureInput(InputConsumer* inputConsumer, InputConsumerObject* inputObject)
+{
     if (!configureInputDialog)
         configureInputDialog = new ConfigureInputDialog(this);
 
     configureInputDialog->SetInputLabel(inputObject->getName());
     if (configureInputDialog->DoModal() == IDCANCEL)
-        return;
+        return FALSE;
 
     GUID g = configureInputDialog->getConfiguredProducerGuid();
     InputProducer* producer = manager->acquireInputProducer(g);
     if (producer == NULL)
-        return;
+        return FALSE;
 
     INT32 e = configureInputDialog->getConfiguredEnum();
     if (e == -1)
-        return;
+        return FALSE;
 
     int i = inputObject->getId();
     bindings[inputConsumer->getId()][i].inputProducer = producer;
     bindings[inputConsumer->getId()][i].inputEnum = e;
 
-    //display what the binding is
-    CHAR* tmp = new CHAR[strlen(producer->getName()) + strlen(producer->getInputName(e)) + 2];
-    strcpy(tmp, producer->getName());
-    strcat(tmp, ".");
-    strcat(tmp, producer->getInputName(e));
-    list->SetItemText(selectedItem.iItem, 1, tmp);
-    delete[] tmp;
+    SetInputText(i, producer, e);
+
+    return TRUE;
 }
 
+void BlissOptionsDialog::OnReset()
+{
+    InputConsumer* inputConsumer = GetSelectedInputConsumer();
+    if (inputConsumer == NULL)
+        return;
+
+    InputConsumerObject* inputObject = GetSelectedInputObject();
+    if (inputObject == NULL)
+        return;
+
+    inputObject->setDeviceInput(NULL, -1);
+    INT32 id = inputObject->getId();
+    bindings[inputConsumer->getId()][id].inputProducer = NULL;
+    bindings[inputConsumer->getId()][id].inputEnum = -1;
+
+    SetInputText(id, NULL, -1);
+}
+
+void BlissOptionsDialog::SetInputText(int itemIndex, InputProducer* producer, INT32 e)
+{
+    //display what the binding is
+    if (producer == NULL || e == -1)
+        GetListCtrl()->SetItemText(itemIndex, 1, "<not bound>");
+    else {
+        CHAR* tmp = new CHAR[strlen(producer->getName()) + strlen(producer->getInputName(e)) + 2];
+        strcpy(tmp, producer->getName());
+        strcat(tmp, ".");
+        strcat(tmp, producer->getInputName(e));
+        GetListCtrl()->SetItemText(itemIndex, 1, tmp);
+        delete[] tmp;
+    }
+}
 
 void BlissOptionsDialog::OnOk()
 {
@@ -319,30 +376,29 @@ void BlissOptionsDialog::SaveConfiguredBindings(InputConsumer* nextIc)
 
         //get the input producer (joystick, keyboard, etc.) bound to this object
         InputProducer* producer = bindings[id][k].inputProducer;
-        if (producer != NULL) {
-            //save the binding to the registry
-            CHAR* key = new CHAR[strlen(nextIc->getName()) + strlen(nextObj->getName()) + 13];
-            strcpy(key, nextIc->getName());
-            strcat(key, ".");
-            strcat(key, nextObj->getName());
-            strcat(key, ".DeviceGUID");
-            GUID g = producer->getGuid();
-            theApp.WriteProfileBinary("Input", key, (LPBYTE)&g, sizeof(GUID));
-            delete[] key;
-        }
+        //save the binding to the registry
+        CHAR* key = new CHAR[strlen(nextIc->getName()) + strlen(nextObj->getName()) + 13];
+        strcpy(key, nextIc->getName());
+        strcat(key, ".");
+        strcat(key, nextObj->getName());
+        strcat(key, ".DeviceGUID");
+        GUID g;
+        memset(&g, 0, sizeof(GUID));
+        if (producer != NULL)
+            g = producer->getGuid();
+        theApp.WriteProfileBinary("Input", key, (LPBYTE)&g, sizeof(GUID));
+        delete[] key;
 
         //get the input enum (joystick axes, keyboard buttons, etc.) bound to this object
         INT32 e = bindings[id][k].inputEnum;
-        if (e != -1) {
-            //save the binding to the registry
-            CHAR* key = new CHAR[strlen(nextIc->getName()) + strlen(nextObj->getName()) + 12];
-            strcpy(key, nextIc->getName());
-            strcat(key, ".");
-            strcat(key, nextObj->getName());
-            strcat(key, ".InputEnum");
-            theApp.WriteProfileInt("Input", key, e);
-            delete[] key;
-        }
+        //save the binding to the registry
+        key = new CHAR[strlen(nextIc->getName()) + strlen(nextObj->getName()) + 12];
+        strcpy(key, nextIc->getName());
+        strcat(key, ".");
+        strcat(key, nextObj->getName());
+        strcat(key, ".InputEnum");
+        theApp.WriteProfileInt("Input", key, e);
+        delete[] key;
     }
 }
 

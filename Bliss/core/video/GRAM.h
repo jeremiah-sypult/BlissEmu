@@ -24,7 +24,6 @@ class GRAM : public RAM
 
     private:
         UINT16    image[GRAM_SIZE];
-        BOOL      visible;
         BOOL      dirtyCards[GRAM_SIZE>>3];
         BOOL      dirtyRAM;
 

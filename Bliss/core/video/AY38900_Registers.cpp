@@ -15,11 +15,10 @@ void AY38900_Registers::init(AY38900* ay38900)
 void AY38900_Registers::reset()
 {
     memset(memory, 0, sizeof(memory));
-    visible = TRUE;
 }
 
 void AY38900_Registers::poke(UINT16 location, UINT16 value) {
-    if (!visible)
+    if (!enabled)
         return;
 
     //incomplete decoding on writes
@@ -139,7 +138,7 @@ void AY38900_Registers::poke(UINT16 location, UINT16 value) {
 
 UINT16 AY38900_Registers::peek(UINT16 location)
 {
-    if (!visible)
+    if (!enabled)
         return location;
 
     location &= 0x3F;

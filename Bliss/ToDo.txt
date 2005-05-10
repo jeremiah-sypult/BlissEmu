@@ -1,19 +1,21 @@
 FOR NEXT RELEASE
-- video
-    - fix the video niggles along the seam between the triangles
-    - the "/fullscreen" command line option is not working for the version downloaded in the .zip
-      file; we should probably also check to see if a cart passed on the command line is broken
-      in the .zip version as well.
-    - missiles in Astrosmash go straight through meteors, but they should be destroyed
+- do more robust lost device handling when device is lost due to window focus in fullscreen mode
+  emulator should pause instead of constantly trying to re-obtain the device, forcing the user back
+  into the Bliss window
+- when the emulator is paused and the user switches between windowed and full-screen, the emulator
+  output does not redraw correctly, probably due to graphics on the texture that need to be
+  reloaded
+- correctly select the first item in the tree when the options window is displayed
+- make the options window resizable
+- bind a control combination (&&) or more than one control (||) to an input; some of this is
+  there, but still need to resolve how to save such complex input configurations in the registry
 
 LONG TERM VISION
 - video
+    - display the window menu in fullscreen mode
     - offer the ability to display the overlays somehow, maybe as a toggle display for the
       lower left and right sides of the screen
-    - display the window menu in fullscreen mode
 - input
-    - bind a control combination (&&) or more than one control (||) to an input
-    - allow user to unbind an input configuration
     - enable user to configure the ENTER or SPACE keyboard keys
     - allow the user to custom-bind different controls to different games
 - saving and loading
@@ -23,15 +25,6 @@ LONG TERM VISION
     - record audio
     - record video
 - other stuff
-    - change .bin/.int support so that it is not file-extension specific, but instead is the
-      last fallback method of loading the selected file (?)
     - allow user to start ECS without a cartridge
-    - support ability to pause; this will enable more robust lost device handling
     - ROMBanker is being saved as a RAM block in Rip::SaveRip(); need a more comprehensive ROM
       banking solution
-      
-INPUT CONFIGURATION
-- add a new binding (single button push or combination)
-- remove an existing binding
-- clear all bindings
-- edit bindings for a particular game

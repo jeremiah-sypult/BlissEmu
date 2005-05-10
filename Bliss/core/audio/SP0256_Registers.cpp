@@ -22,7 +22,8 @@ void SP0256_Registers::poke(UINT16 location, UINT16 value)
 
                 ms->command = value & 0xFF;
 
-                ms->idle = FALSE;
+                if (!ms->speaking)
+                    ms->idle = FALSE;
             }
             break;
         //$81 will reset the SP0256 or push an 8-bit value into the queue

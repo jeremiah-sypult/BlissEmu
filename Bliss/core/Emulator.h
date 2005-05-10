@@ -20,11 +20,26 @@
 #include "core/memory/MemoryBus.h"
 #include "core/memory/Memory.h"
 
-#define MAX_PERIPHERALS    16
+class Intellivision;
+//class Atari5200;
 
+#define MAX_PERIPHERALS    16
+#define NUM_EMULATORS 1
+
+/**
+ *
+ */
 class Emulator : public Peripheral
 {
     public:
+        void AddPeripheral(Peripheral* p);
+        UINT32 GetPeripheralCount();
+        Peripheral* GetPeripheral(UINT32);
+
+        void UsePeripheral(UINT32, BOOL);
+
+        void SetRip(Rip* rip);
+
         void InitVideo(IDirect3DDevice9* direct3DDevice);
         void ReleaseVideo();
         void InitAudio(IDirectSoundBuffer8* directSoundBuffer);
@@ -32,13 +47,8 @@ class Emulator : public Peripheral
 
         void Reset();
         void Run();
-		void Render();
         void FlushAudio();
-        void SetRip(Rip* rip);
-
-        UINT32 GetPeripheralCount();
-        Peripheral* GetPeripheral(UINT32);
-        void UsePeripheral(UINT32, BOOL);
+		void Render();
 
 		static UINT32 GetEmulatorCount();
         static Emulator* GetEmulator(UINT32 i);
@@ -46,8 +56,6 @@ class Emulator : public Peripheral
         
     protected:
         Emulator(const char* name);
-
-        void AddPeripheral(Peripheral* p);
 
         MemoryBus          memoryBus;
 
@@ -66,6 +74,9 @@ class Emulator : public Peripheral
         BOOL            usePeripheralIndicators[MAX_PERIPHERALS];
         INT32           peripheralCount;
 
+        static UINT32 systemIDs[NUM_EMULATORS];
+        static Emulator* emus[NUM_EMULATORS];
+        static Intellivision inty;
 
 };
 

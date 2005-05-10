@@ -4,7 +4,7 @@
 
 #include <dinput.h>
 
-interface InputProducer
+class InputProducer
 {
 public:
     InputProducer(GUID g) : guid(g) {}

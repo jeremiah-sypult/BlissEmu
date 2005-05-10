@@ -12,7 +12,6 @@ GRAM::GRAM()
 void GRAM::reset()
 {
     UINT16 i;
-    visible = TRUE;
     dirtyRAM = TRUE;
     for (i = 0; i < GRAM_SIZE; i++)
         image[i] = 0;
@@ -22,12 +21,12 @@ void GRAM::reset()
 }
 
 UINT16 GRAM::peek(UINT16 location) {
-    return (visible ? image[location & 0x01FF] : location);
+    return (enabled ? image[location & 0x01FF] : location);
 }
 
 void GRAM::poke(UINT16 location, UINT16 value)
 {
-    if (!visible)
+    if (!enabled)
         return;
 
     location &= 0x01FF;

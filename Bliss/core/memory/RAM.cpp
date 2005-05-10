@@ -2,6 +2,7 @@
 #include "RAM.h"
 
 RAM::RAM(UINT16 size, UINT16 location)
+: enabled(TRUE)
 {
     this->size = size;
     this->location = location;
@@ -13,6 +14,7 @@ RAM::RAM(UINT16 size, UINT16 location)
 }
 
 RAM::RAM(UINT16 size, UINT16 location, UINT8 bitWidth)
+: enabled(TRUE)
 {
     this->size = size;
     this->location = location;
@@ -24,6 +26,7 @@ RAM::RAM(UINT16 size, UINT16 location, UINT8 bitWidth)
 }
 
 RAM::RAM(UINT16 size, UINT16 location, UINT16 readAddressMask, UINT16 writeAddressMask)
+: enabled(TRUE)
 {
     this->size = size;
     this->location = location;
@@ -35,6 +38,7 @@ RAM::RAM(UINT16 size, UINT16 location, UINT16 readAddressMask, UINT16 writeAddre
 }
 
 RAM::RAM(UINT16 size, UINT16 location, UINT16 readAddressMask, UINT16 writeAddressMask, UINT8 bitWidth)
+: enabled(TRUE)
 {
     this->size = size;
     this->location = location;
@@ -52,8 +56,14 @@ RAM::~RAM()
 
 void RAM::reset()
 {
+    enabled = TRUE;
     for (UINT16 i = 0; i < size; i++)
         image[i] = 0;
+}
+
+void RAM::SetEnabled(BOOL b)
+{
+    enabled = b;
 }
 
 UINT8 RAM::getBitWidth()
@@ -61,12 +71,12 @@ UINT8 RAM::getBitWidth()
     return bitWidth;
 }
 
-UINT16 RAM::getSize()
+UINT16 RAM::getReadSize()
 {
     return size;
 }
 
-UINT16 RAM::getAddress()
+UINT16 RAM::getReadAddress()
 {
     return location;
 }
@@ -76,6 +86,16 @@ UINT16 RAM::getReadAddressMask()
     return readAddressMask;
 }
 
+UINT16 RAM::getWriteSize()
+{
+    return size;
+}
+
+UINT16 RAM::getWriteAddress()
+{
+    return location;
+}
+
 UINT16 RAM::getWriteAddressMask()
 {
     return writeAddressMask;
@@ -83,11 +103,15 @@ UINT16 RAM::getWriteAddressMask()
 
 UINT16 RAM::peek(UINT16 location)
 {
-    return image[location-this->location];
+    if (enabled)
+        return image[location-this->location];
+    else
+        return 0xFFFF;
 }
 
 void RAM::poke(UINT16 location, UINT16 value)
 {
-    image[location-this->location] = (value & trimmer);
+    if (enabled)
+        image[location-this->location] = (value & trimmer);
 }
 

@@ -11,6 +11,12 @@
 #include "core/Emulator.h"
 #include "core/input/InputProducerManager.h"
 
+typedef enum _RunState {
+    Stopped,
+    Paused,
+    Running
+} RunState;
+
 class BlissMainFrame : public CFrameWnd
 {
 	
@@ -31,6 +37,7 @@ protected:
 	afx_msg void OnFileClose();
 	afx_msg void OnSettings();
 	afx_msg void OnClose();
+	afx_msg void OnPause();
 	afx_msg void OnFullScreenMode();
     afx_msg void OnCheckMenuItems();
     afx_msg void OnCheckMenuItems(CCmdUI* pCmdUI);
@@ -59,6 +66,7 @@ private:
     void ReleaseDirectSound();
     void ReleaseDirectInput();
     BOOL CheckDevice();
+    void SetPaused(BOOL paused);
 
     //configuration stuff
     LRESULT OnStartUp();
@@ -67,7 +75,7 @@ private:
 	BOOL LoadPeripheralRoms(Peripheral* p);
 
     HACCEL accel;
-	BOOL running;
+	RunState runState;
 	Emulator* currentEmu;
     Rip* currentRip;
     WINDOWPLACEMENT wp;
