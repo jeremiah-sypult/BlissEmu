@@ -5,6 +5,9 @@
 #include "ConfigureInputDialog.h"
 #include "core/Emulator.h"
 
+//the total number of keys/buttons/axes the user can have in each binding
+#define MAX_SUB_BINDINGS  5
+
 BOOL CALLBACK EnumDevices(LPCDIDEVICEINSTANCE lpddi, LPVOID pvRef);
 
 IMPLEMENT_DYNAMIC(ConfigureInputDialog, CDialog)
@@ -20,12 +23,17 @@ END_MESSAGE_MAP()
 ConfigureInputDialog::ConfigureInputDialog(CWnd* parent)
 : CDialog(IDD_CONFIGUREINPUTDIALOG, parent),
   manager(NULL),
-  label(NULL)
+  inputConfig(NULL)
 {}
 
-void ConfigureInputDialog::SetInputLabel(const CHAR* l)
+INT_PTR ConfigureInputDialog::AddBinding(InputConfiguration* inputConfig)
 {
-    label = l;
+    if (inputConfig == NULL || inputConfig->bindingCount == MAX_BINDINGS)
+        return IDCANCEL;
+
+    this->inputConfig = inputConfig;
+
+    return DoModal();
 }
 
 void ConfigureInputDialog::OnShowWindow(BOOL show, UINT i)
@@ -37,24 +45,27 @@ void ConfigureInputDialog::OnShowWindow(BOOL show, UINT i)
     if (!show)
         return;
 
-    GetInputLabel()->SetWindowText(label);
+    GetInputLabel()->SetWindowText(inputConfig->inputObject->getName());
  
-    //reset the configured input
-    memset(&configuredProducerGuid, 0, sizeof(GUID));
-    configuredEnum = -1;
+    //make space to hold our new binding
+    inputConfig->producerIDs[inputConfig->bindingCount] = new GUID[MAX_SUB_BINDINGS];
+    inputConfig->objectIDs[inputConfig->bindingCount] = new INT32[MAX_SUB_BINDINGS];
+    inputConfig->subBindingCounts[inputConfig->bindingCount] = 0;
 
     //show the input we're trying to configure
     CStatic* list = GetInputLabel();
-    list->SetWindowText(this->label);
+    list->SetWindowText(inputConfig->inputObject->getName());
+    //take the focus off the button, so the user can configure a SPACE without triggering
+    //the Cancel button
+    list->SetFocus();
 
     //set up input manager
     manager = new InputProducerManager(m_hWnd);
 
     //acquire all the existing directinput devices
     IDirectInput8* directInput = manager->getDevice();
-    //directInput->EnumDevices(DI8DEVCLASS_GAMECTRL | DI8DEVCLASS_KEYBOARD, EnumDevices, this, DIEDFL_ATTACHEDONLY);
     directInput->EnumDevices(DI8DEVCLASS_ALL, EnumDevices, manager, DIEDFL_ATTACHEDONLY);
-        
+
     //start polling timer
     this->SetTimer(1, 100, NULL);
 }
@@ -98,23 +109,64 @@ void ConfigureInputDialog::OnKeyUp(UINT nChar, UINT repCnt, UINT flags)
 
 void ConfigureInputDialog::OnTimer(UINT)
 {
+    INT32 bc = inputConfig->bindingCount;
+
     manager->pollInputProducers();
     int count = manager->getAcquiredInputProducerCount();
     for (int i = 0; i < count; i++) {
         InputProducer* nextProd = manager->getAcquiredInputProducer(i);
-        INT32 input = nextProd->evaluateForAnyInput();
-        if (input == -1)
-            continue;
+        INT32 inputCount = nextProd->getInputCount();
+        for (INT32 j = 0; j < inputCount; j++) {
+            float nextInput = nextProd->getValue(j);
+            if (nextInput == 0.0f)
+                continue;
 
-        this->configuredProducerGuid = nextProd->getGuid();
-        this->configuredEnum = input;
-        if (firstInputMark == 0)
-            firstInputMark = clock();
-        break;
+            //check to be sure this input isn't a duplicate
+            INT32 sbc = inputConfig->subBindingCounts[bc];
+            BOOL foundDuplicate = FALSE;
+            for (INT32 k = 0; k < sbc; k++) {
+                if (inputConfig->producerIDs[bc][k] == nextProd->getGuid() &&
+                        inputConfig->objectIDs[bc][k] == j)
+                {
+                    foundDuplicate = TRUE;
+                    break;
+                }
+            }
+            if (foundDuplicate)
+                continue;
+
+            inputConfig->producerIDs[bc][sbc] = nextProd->getGuid();
+            inputConfig->objectIDs[bc][sbc] = j;
+            inputConfig->subBindingCounts[bc]++;
+            if (inputConfig->subBindingCounts[bc] == MAX_SUB_BINDINGS)
+                break;
+
+            if (firstInputMark == 0)
+                firstInputMark = clock();
+        }
+
+        if (inputConfig->subBindingCounts[bc] == MAX_SUB_BINDINGS)
+            break;
     }
 
-    if (firstInputMark != 0 && (clock() - firstInputMark)/CLK_TCK > 0)
+    if (inputConfig->subBindingCounts[inputConfig->bindingCount] == MAX_SUB_BINDINGS ||
+            (firstInputMark != 0 && (clock() - firstInputMark)/CLK_TCK > 0))
+    {
+        inputConfig->bindingCount++;
         EndDialog(IDOK);
+    }
+}
+
+void ConfigureInputDialog::OnOK()
+{
+    //necessary to override this to prevent default behavior on using the ENTER key
+}
+
+void ConfigureInputDialog::OnCancel()
+{
+    delete[] inputConfig->producerIDs[inputConfig->bindingCount];
+    delete[] inputConfig->objectIDs[inputConfig->bindingCount];
+    EndDialog(IDCANCEL);
 }
 
 CStatic* ConfigureInputDialog::GetInputLabel()

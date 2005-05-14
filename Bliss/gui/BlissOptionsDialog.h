@@ -5,6 +5,7 @@
 #include "core/input/InputConsumer.h"
 #include "core/input/InputConsumerObject.h"
 #include "core/input/InputProducerManager.h"
+#include "BlissConfiguration.h"
 
 typedef struct _Binding Binding;
 
@@ -21,12 +22,14 @@ public:
     afx_msg void OnConfigureAll();
     afx_msg void OnAddBinding();
     afx_msg void OnReset();
+    afx_msg void OnResetAll();
+    afx_msg void OnSize(UINT type, int cx, int cy);
 
 private:
     void LoadConfiguredBindings(InputConsumer* inputConsumer);
     void SaveConfiguredBindings(InputConsumer* inputConsumer);
-    void SetInputText(int itemIndex, InputProducer* producer, INT32 e);
-    BOOL ConfigureInput(InputConsumer* inputConsumer, InputConsumerObject* inputObject);
+    void SetInputText(int itemIndex, InputConfiguration*);
+    BOOL ConfigureInput();
     InputConsumer* GetSelectedInputConsumer();
     InputConsumerObject* GetSelectedInputObject();
 
@@ -35,7 +38,8 @@ private:
 
     ConfigureInputDialog* configureInputDialog;
     InputProducerManager* manager;
-    Binding* bindings[3];
+    InputConfiguration** inputConfigs[3];
+    INT32 inputObjectCounts[3];
 
 	DECLARE_DYNAMIC(BlissOptionsDialog);
     DECLARE_MESSAGE_MAP();

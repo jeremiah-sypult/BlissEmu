@@ -153,6 +153,12 @@
 				RelativePath=".\gui\BlissCommandLine.h">
 			</File>
 			<File
+				RelativePath=".\gui\BlissConfiguration.cpp">
+			</File>
+			<File
+				RelativePath=".\gui\BlissConfiguration.h">
+			</File>
+			<File
 				RelativePath=".\gui\BlissMainFrame.cpp">
 			</File>
 			<File
@@ -313,6 +319,9 @@
 				</File>
 				<File
 					RelativePath=".\core\rip\ioapi.h">
+				</File>
+				<File
+					RelativePath=".\core\rip\knowncarts.cfg">
 				</File>
 				<File
 					RelativePath=".\core\rip\Rip.cpp">

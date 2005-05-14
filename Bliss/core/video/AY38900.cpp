@@ -587,7 +587,15 @@ void AY38900::setVideoOutputDevice(IDirect3DDevice9* vod)
 		videoOutputDevice->CreateTexture(160, 192, 1, D3DUSAGE_DYNAMIC, D3DFMT_X8R8G8B8,
                 D3DPOOL_DEFAULT, &combinedTexture, NULL);
 	    
-		//create our vertex buffer
+	    combinedTexture->LockRect(0, &combinedBufferLock, NULL, D3DLOCK_DISCARD |  D3DLOCK_NOSYSLOCK);
+        renderBorders();
+        copyBackgroundBufferToStagingArea();
+        copyMOBsToStagingArea();
+        for (int i = 0; i < 8; i++)
+            registers.memory[0x18+i] |= mobs[i].collisionRegister;
+	    combinedTexture->UnlockRect(0);
+
+        //create our vertex buffer
 		IDirect3DSurface9* bb;
 		videoOutputDevice->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &bb);
 		D3DSURFACE_DESC desc;
@@ -618,6 +626,8 @@ void AY38900::renderFrame()
     for (int i = 0; i < 8; i++)
         mobs[i].collisionRegister = 0;
     determineMOBCollisions();
+    markClean();
+
 	combinedTexture->LockRect(0, &combinedBufferLock, NULL, D3DLOCK_DISCARD |  D3DLOCK_NOSYSLOCK);
     renderBorders();
     copyBackgroundBufferToStagingArea();
@@ -625,7 +635,6 @@ void AY38900::renderFrame()
     for (int i = 0; i < 8; i++)
         registers.memory[0x18+i] |= mobs[i].collisionRegister;
 	combinedTexture->UnlockRect(0);
-    markClean();
 }
 
 void AY38900::render()
@@ -654,9 +663,11 @@ void AY38900::markClean() {
 
 void AY38900::renderBorders()
 {
+    /*
     //see if anything has changed to necessitate drawing the borders
     if (!bordersChanged && (!offsetsChanged || (blockLeft && blockTop)))
         return;
+    */
 
     //draw the top and bottom borders
     if (blockTop) {
@@ -978,11 +989,21 @@ void AY38900::renderColoredSquares(int x, int y, UINT8 color0, UINT8 color1,
 
 void AY38900::determineMOBCollisions()
 {
-    //check MOB to MOB collisions
     for (int i = 0; i < 7; i++) {
         if (mobs[i].xLocation == 0 || !mobs[i].flagCollisions)
             continue;
 
+        /*
+        //check MOB on foreground collisions
+        if (mobCollidesWithForeground(i))
+            mobs[i].collisionRegister |= 0x0100;
+
+        //check MOB on border collisions
+        if (mobCollidesWithBorder(i))
+            mobs[i].collisionRegister |= 0x0200;
+        */
+
+        //check MOB on MOB collisions
         for (int j = i+1; j < 8; j++) {
             if (mobs[j].xLocation == 0 || !mobs[j].flagCollisions)
                 continue;
@@ -995,24 +1016,91 @@ void AY38900::determineMOBCollisions()
     }
 }
 
+BOOL AY38900::mobCollidesWithBorder(int mobNum)
+{
+    MOBRect* r = mobs[mobNum].getBounds();
+    UINT8 mobPixelHeight = (UINT8)(r->height<<1);
+
+    /*
+    if (r->x > (blockLeft ? 8 : 0) && r->x+r->width <= 191 &&
+            r->y > (blockTop ? 8 : 0) && r->y+r->height <= 158)
+        return FALSE;
+
+    for (UINT8 i = 0; i < r->height; i++) {
+        if (mobBuffers[mobNum][i<<1] == 0 || mobBuffers[mobNum][(i<<1)+1] == 0)
+            continue;
+
+        if (r->y+i < (blockLeft ? 8 : 0) || r->y+r->height+i > 158)
+            return TRUE;
+
+        //if (r->x && border
+    }
+    */
+
+    UINT16 leftRightBorder = 0;
+    //check if could possibly touch the left border
+    if (r->x < (blockLeft ? 8 : 0)) {
+        leftRightBorder = (UINT16)((blockLeft ? 0xFFFF : 0xFF00) << mobs[mobNum].xLocation);
+    }
+    //check if could possibly touch the right border
+    else if (r->x+r->width > 158) {
+        leftRightBorder = 0xFFFF;
+        if (r->x < 158)
+            leftRightBorder >>= r->x-158;
+    }
+
+    //check if touching the left or right border
+    if (leftRightBorder) {
+        for (INT32 i = 0; i < mobPixelHeight; i++) {
+            if ((mobBuffers[mobNum][i] & leftRightBorder) != 0)
+                return TRUE;
+        }
+    }
+
+    //check if touching the top border
+    UINT8 overlappingStart = 0;
+    UINT8 overlappingHeight = 0;
+    if (r->y < (blockTop ? 8 : 0)) {
+        overlappingHeight = mobPixelHeight;
+        if (r->y+r->height > (blockTop ? 8 : 0))
+            overlappingHeight = (UINT8)(mobPixelHeight - (2*(r->y+r->height-(blockTop ? 8 : 0))));
+    }
+    //check if touching the bottom border
+    else if (r->y+r->height > 191) {
+        if (r->y < 191)
+            overlappingStart = (UINT8)(2*(191-r->y));
+        overlappingHeight = mobPixelHeight - overlappingStart;
+    }
+
+    if (overlappingHeight) {
+        for (UINT8 i = overlappingStart; i < overlappingHeight; i++) {
+            if (mobBuffers[mobNum][i] != 0)
+                return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
 BOOL AY38900::mobsCollide(int mobNum0, int mobNum1)
 {
-    MOBRect* r0;
-    r0 = mobs[mobNum0].getBounds();
-    MOBRect* r1;
-    r1 = mobs[mobNum1].getBounds();
+    MOBRect* r0 = mobs[mobNum0].getBounds();
+    MOBRect* r1 = mobs[mobNum1].getBounds();
     if (!r0->intersects(r1))
         return FALSE;
 
-    //iterate over the intersecting bits to see if any touch
+    //determine the overlapping horizontal area
     int startingX = MAX(r0->x, r1->x);
+    int offsetXr0 = startingX - r0->x;
+    int offsetXr1 = startingX - r1->x;
+
+    //determine the overlapping vertical area
     int startingY = MAX(r0->y, r1->y);
     int offsetYr0 = (startingY - r0->y) * 2;
     int offsetYr1 = (startingY - r1->y) * 2;
     int overlappingHeight = (MIN(r0->y + r0->height, r1->y + r1->height) - startingY) * 2;
-    int offsetXr0 = startingX - r0->x;
-    int offsetXr1 = startingX - r1->x;
 
+    //iterate over the intersecting bits to see if any touch
     for (int y = 0; y < overlappingHeight; y++) {
         if (((mobBuffers[mobNum0][offsetYr0 + y] << offsetXr0) & (mobBuffers[mobNum1][offsetYr1 + y] << offsetXr1)) != 0)
             return TRUE;
@@ -1020,52 +1108,6 @@ BOOL AY38900::mobsCollide(int mobNum0, int mobNum1)
 
     return FALSE;
 }
-
-/*
-void AY38900::determineMOBCollisions() {
-    //check mob to mob collisions
-    for (int i = 0; i < 7; i++) {
-        if (mobs[i].xLocation == 0 || !mobs[i].flagCollisions)
-            continue;
-
-        for (int j = i+1; j < 8; j++) {
-            if (mobs[j].xLocation == 0 || !mobs[j].flagCollisions)
-                continue;
-
-            if (mobsCollide(i, j)) {
-                mobs[i].collisionRegister |= (UINT8)(1 << j);
-                mobs[j].collisionRegister |= (UINT8)(1 << i);
-            }
-        }
-    }
-}
-
-BOOL AY38900::mobsCollide(int mobNum0, int mobNum1) {
-    MOBRect* r0;
-    r0 = mobs[mobNum0].getBounds();
-    MOBRect* r1;
-    r1 = mobs[mobNum1].getBounds();
-    if (!r0->intersects(r1))
-        return FALSE;
-
-    //iterate over the intersecting bits to see if any touch
-    int x0 = MAX(r0->x, r1->x);
-    int y0 = MAX(r0->y, r1->y);
-    int r0y = 2*(y0-r0->y);
-    int r1y = 2*(y0-r1->y);
-    int width = MIN(r0->x+r0->width, r1->x+r1->width) - x0;
-    int height = (MIN(r0->y+r0->height, r1->y+r1->height) - y0) * 2;
-    for (int x = 0; x < width; x++) {
-        for (int y = 0; y < height; y++) {
-            if (mobBuffers[mobNum0][x0-r0->x+x][r0y+y] &&
-                mobBuffers[mobNum1][x0-r1->x+x][r1y+y])
-                return TRUE;
-        }
-    }
-
-    return FALSE;
-}
-*/
 
 /*
 void AY38900::renderRow(int rowNum) {
@@ -1140,97 +1182,6 @@ void AY38900::renderRow(int rowNum) {
                 nexty += 8;
             }
         }
-    }
-}
-*/
-
-/*
-void AY38900::renderMOBs()
-{
-    MOBRect* r;
-    int cardNumber;
-    int cardMemoryLocation;
-    int pixelSize;
-    int mobPixelHeight;
-    BOOL doubleX;
-    UINT16 nextMemoryLocation;
-    int nextData;
-    int nextX;
-    int nextY;
-    int xInc;
-
-    for (int i = 0; i < 8; i++) {
-        if (!mobs[i].changed && mobs[i].isGrom)
-            continue;
-
-        cardNumber = mobs[i].cardNumber;
-        if (!mobs[i].isGrom)
-            cardNumber = (cardNumber & 0x003F);
-        cardMemoryLocation = (cardNumber << 3);
-
-        r = mobs[i].getBounds();
-        pixelSize = (mobs[i].quadHeight ? 4 : 1) *
-            (mobs[i].doubleHeight ? 2 : 1);
-        mobPixelHeight = 2 * r->height;
-        doubleX = mobs[i].doubleWidth;
-
-        for (int j = 0; j < mobPixelHeight; j++) {
-            nextMemoryLocation = (UINT16)(cardMemoryLocation + (j/pixelSize));
-            //if (!mobs[i].changed && !gram->isDirty(nextMemoryLocation))
-            //continue;
-
-            nextData = (mobs[i].isGrom
-                ? (nextMemoryLocation >= (int)grom->getSize()
-                ? (UINT16)0xFFFF : grom->peek(nextMemoryLocation))
-                : (nextMemoryLocation >= (int)gram->getSize()
-                ? (UINT16)0xFFFF: gram->peek(nextMemoryLocation)));
-            nextX = (mobs[i].horizontalMirror ? (doubleX ? 15 : 7) : 0);
-            nextY = (mobs[i].verticalMirror
-                ? (mobPixelHeight - j - 1) : j);
-            xInc = (mobs[i].horizontalMirror ? -1: 1);
-            mobBuffers[i][nextX][nextY] = ((nextData & 0x0080) != 0);
-            mobBuffers[i][nextX + xInc][nextY] = (doubleX
-                ? ((nextData & 0x0080) != 0)
-                : ((nextData & 0x0040) != 0));
-            mobBuffers[i][nextX + (2*xInc)][nextY] = (doubleX
-                ? ((nextData & 0x0040) != 0)
-                : ((nextData & 0x0020) != 0));
-            mobBuffers[i][nextX + (3*xInc)][nextY] = (doubleX
-                ? ((nextData & 0x0040) != 0)
-                : ((nextData & 0x0010) != 0));
-            mobBuffers[i][nextX + (4*xInc)][nextY] = (doubleX
-                ? ((nextData & 0x0020) != 0)
-                : ((nextData & 0x0008) != 0));
-            mobBuffers[i][nextX + (5*xInc)][nextY] = (doubleX
-                ? ((nextData & 0x0020) != 0)
-                : ((nextData & 0x0004) != 0));
-            mobBuffers[i][nextX + (6*xInc)][nextY] = (doubleX
-                ? ((nextData & 0x0010) != 0)
-                : ((nextData & 0x0002) != 0));
-            mobBuffers[i][nextX + (7*xInc)][nextY] = (doubleX
-                ? ((nextData & 0x0010) != 0)
-                : ((nextData & 0x0001) != 0));
-            if (!doubleX)
-                continue;
-
-            mobBuffers[i][nextX + (8*xInc)][nextY] =
-                ((nextData & 0x0008) != 0);
-            mobBuffers[i][nextX + (9*xInc)][nextY] =
-                ((nextData & 0x0008) != 0);
-            mobBuffers[i][nextX + (10*xInc)][nextY] =
-                ((nextData & 0x0004) != 0);
-            mobBuffers[i][nextX + (11*xInc)][nextY] =
-                ((nextData & 0x0004) != 0);
-            mobBuffers[i][nextX + (12*xInc)][nextY] =
-                ((nextData & 0x0002) != 0);
-            mobBuffers[i][nextX + (13*xInc)][nextY] =
-                ((nextData & 0x0002) != 0);
-            mobBuffers[i][nextX + (14*xInc)][nextY] =
-                ((nextData & 0x0001) != 0);
-            mobBuffers[i][nextX + (15*xInc)][nextY] =
-                ((nextData & 0x0001) != 0);
-        }
-
     }
 }
 */

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "BlissConfiguration.h"
 #include "core/input/InputProducerManager.h"
 
 class ConfigureInputDialog : public CDialog
@@ -9,23 +10,23 @@ public:
 
     virtual BOOL OnInitDialog();
 
-    afx_msg void SetInputLabel(const CHAR* l);
+    INT_PTR AddBinding(InputConfiguration* inputConfig);
+    void OnOK();
+    void OnCancel();
+
     afx_msg void OnShowWindow(BOOL, UINT);
     afx_msg void OnTimer(UINT id);
     afx_msg void OnDestroy();
     afx_msg void OnKeyDown(UINT, UINT, UINT);
     afx_msg void OnKeyUp(UINT, UINT, UINT);
 
-    GUID getConfiguredProducerGuid() { return configuredProducerGuid; }
-    INT32 getConfiguredEnum() { return configuredEnum; }
+    InputConfiguration* GetInputConfiguration() { return inputConfig; }
 
 private:
     CStatic* GetInputLabel();
 
-    const CHAR* label;
     InputProducerManager* manager;
-    GUID configuredProducerGuid;
-    INT32 configuredEnum;
+    InputConfiguration* inputConfig;
     clock_t firstInputMark;
 
     DECLARE_DYNAMIC(ConfigureInputDialog);

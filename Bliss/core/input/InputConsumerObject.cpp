@@ -7,20 +7,53 @@ InputConsumerObject::InputConsumerObject(INT32 i, const CHAR* n, GUID ddg, INT32
   name(n),
   defaultDeviceGuid(ddg),
   defaultObjectID(doid),
-  objectID(-1),
-  producer(NULL)
-{}
-
-void InputConsumerObject::setDeviceInput(InputProducer* producer, INT32 objectid)
+  bindingCount(0)
 {
-	this->producer = producer;
-	this->objectID = objectid;
+    memset(producerBindings, 0, sizeof(producerBindings));
+    memset(objectIDBindings, 0, sizeof(objectIDBindings));
+    memset(subBindingCounts, 0, sizeof(subBindingCounts));
+}
+
+InputConsumerObject::~InputConsumerObject()
+{
+    clearBindings();
+}
+
+void InputConsumerObject::addBinding(InputProducer** producers, INT32* objectids, INT32 count)
+{
+    if (bindingCount >= MAX_BINDINGS)
+        return;
+
+    producerBindings[bindingCount] = new InputProducer*[count];
+    memcpy(producerBindings[bindingCount], producers, sizeof(InputProducer*)*count);
+    objectIDBindings[bindingCount] = new INT32[count];
+    memcpy(objectIDBindings[bindingCount], objectids, sizeof(INT32)*count);
+    subBindingCounts[bindingCount] = count;
+    bindingCount++;
+}
+
+void InputConsumerObject::clearBindings()
+{
+    for (INT32 i = 0; i < bindingCount; i++) {
+        delete[] producerBindings[i];
+        delete[] objectIDBindings[i];
+    }
+    memset(producerBindings, 0, sizeof(producerBindings));
+    memset(objectIDBindings, 0, sizeof(objectIDBindings));
+    memset(subBindingCounts, 0, sizeof(subBindingCounts));
+    bindingCount = 0;
 }
 
 float InputConsumerObject::getInputValue()
 {
-	if (producer == NULL)
-		return 0.0f;
-		
-	return producer->getValue(objectID);
+    float value = 0.0f;
+    for (INT32 i = 0; i < bindingCount; i++) {
+        float nextValue = 1.0f;
+        for (INT32 j = 0; j < subBindingCounts[i]; j++) {
+            float v = producerBindings[i][j]->getValue(objectIDBindings[i][j]);
+            nextValue = (nextValue < v ? nextValue : v);
+        }
+        value = (value > nextValue ? value : nextValue);
+    }
+    return value;
 }

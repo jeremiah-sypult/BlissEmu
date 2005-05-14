@@ -29,6 +29,8 @@ public:
     INT32 getInputCount();
     INT32 getInput(int i);
     
+    virtual BOOL isKeyboardDevice() { return FALSE; }
+
 private:
     IDirectInputDevice8* joystickDevice;
     DIJOYSTATE2 state;

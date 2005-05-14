@@ -1,13 +1,38 @@
 v2.0.4 - ???
-- Fixed a bug where the Intellivoice would only speak during the title screen
-  of each Intellivoice games, but would not speak the in-game phrases. The
+- Significantly updated the input configuration capabilities to include the
+  following additions, changes, and fixes:
+    - Added the ability to bind a combination of inputs to each emulated
+      input. This allows you to use multi-key or multi-button combinations as
+      an input.
+    - Added the ability to bind more than one set of inputs to each emulated
+      input. This allows more than one key configurations to activate the same
+      emulated input, allowing you to have two joysticks simultaneously mapped
+      to the same hand controller, for example.
+    - Added the ability to clear all input bindings and configure all inputs
+      at once, simplifying the input configuration process.
+    - Added the ability to reset an input binding, leaving it completely
+      unbound if you don't intend to use it.
+    - ECS keyboard inputs are sorted into a more logical order in the input
+      configuration window.
+    - Fixed a bug with the input configuration dialog where you could not
+      configure the ENTER or SPACE keyboard keys.
+    - Changed the input configuration dialog to be resizeable.
+- In full-screen mode, the mouse cursor now times out and automatically
+  disappears after a few seconds with no mouse movement.
+- Added the ability to pause the game currently in progress (Alt+P).
+- Fixed the bug where the Intellivoice would only speak during the title screen
+  of the Intellivoice games, but would not speak the in-game phrases. The
   Intellivoice emulation now properly speaks all phrases.
-- Added the ability to pause the game currently in progress.
-- Added the ability to unbind input configurations, thus leaving an emulated
-  input device without a configurated input
 - Fixed a bug where the ECS keyboard was not being scanned, which prevented
   use of the keyboard in the games that require it.
-- Fixed the icon for the options window.
+- Fixed a problem where Bliss wouldn't play nice if you tried to switch to
+  another application while in full-screen mode. You can now switch between
+  apps with no problems while in full-screen mode.
+- Fixed the icon for the settings dialog.
+- Settings dialog now correctly selects the first item in the tree every time
+  the options window is displayed.
+- Accelerator keys are now shown in the window menus.
+
 
 v2.0.3 - April 25, 2005
 - Fixed a bug where I was accidentally requesting a DirectX device with

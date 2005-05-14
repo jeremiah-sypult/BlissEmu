@@ -70,6 +70,8 @@ private:
 	void renderColoredSquares(INT32 x, INT32 y, UINT8 color0, UINT8 color1, UINT8 color2, UINT8 color3);
 	void determineMOBCollisions();
 	BOOL mobsCollide(INT32 mobNum0, INT32 mobNum1);
+    BOOL mobCollidesWithBorder(int mobNum);
+    BOOL mobCollidesWithForeground(int mobNum);
 	//void renderRow(INT32 rowNum);
 
 	const static INT32 TICK_LENGTH_SCANLINE;
@@ -89,7 +91,6 @@ private:
 
     MemoryBus* memoryBus;
 
-    //BOOL                    mobBuffers[8][16][128];
     UINT16                  mobBuffers[8][128];
     MOB                     mobs[8];
     UINT8                   backgroundBuffer[160*96];

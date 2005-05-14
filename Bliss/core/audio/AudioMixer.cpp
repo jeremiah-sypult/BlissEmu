@@ -123,7 +123,7 @@ INT32 AudioMixer::tick(INT32 minimum)
 {
     for (int totalTicks = 0; totalTicks < minimum; totalTicks++) {
         //mix and flush the sample buffers
-        INT64 totalSample = 0;	// 64?
+        INT64 totalSample = 0;
         for (UINT32 i = 0; i < audioProducerCount; i++) {
             AudioOutputLine* nextLine = audioProducers[i]->audioOutputLine;
 

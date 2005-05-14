@@ -65,18 +65,18 @@ IDR_MAINFRAME MENU
 BEGIN
     POPUP "&File"
     BEGIN
-        MENUITEM "&Open...",                    ID_FILE_OPEN
+        MENUITEM "&Open...\tCtrl+O",            ID_FILE_OPEN
         MENUITEM "&Reset",                      ID_FILE_RESET, INACTIVE
         MENUITEM "&Close",                      ID_FILE_CLOSE, INACTIVE
         MENUITEM SEPARATOR
         MENUITEM "&Settings...",                ID_SETTINGS
         MENUITEM SEPARATOR
-        MENUITEM "E&xit",                       ID_APP_EXIT
+        MENUITEM "E&xit\tAlt+F4",               ID_APP_EXIT
     END
     POPUP "&View"
     BEGIN
-        MENUITEM "&Pause",                      ID_VIEW_PAUSE
-        MENUITEM "&Full Screen Mode",           ID_VIEW_FULLSCREENMODE
+        MENUITEM "&Pause\tAlt+P",               ID_VIEW_PAUSE
+        MENUITEM "&Full Screen Mode\tAlt+Enter", ID_VIEW_FULLSCREENMODE
     END
 END
 
@@ -134,24 +134,25 @@ IDR_MAINFRAME           ICON                    "bliss.ico"
 // Dialog
 //
 
-IDD_OPTIONSDIALOG DIALOGEX 0, 0, 398, 242
+IDD_OPTIONSDIALOG DIALOGEX 0, 0, 370, 213
 STYLE DS_SETFONT | DS_3DLOOK | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
     WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
-CAPTION "Options"
+CAPTION "Settings"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     CONTROL         "",IDC_OPTIONSTREE,"SysTreeView32",TVS_HASBUTTONS | 
                     TVS_HASLINES | TVS_SHOWSELALWAYS | WS_BORDER | 
-                    WS_TABSTOP,7,7,101,227,WS_EX_CLIENTEDGE
+                    WS_TABSTOP,7,7,102,198,WS_EX_CLIENTEDGE
     CONTROL         "",IDC_OPTIONSLIST,"SysListView32",LVS_REPORT | 
                     LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_ALIGNLEFT | 
-                    LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,112,7,214,227,
+                    LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,112,7,185,198,
                     WS_EX_CLIENTEDGE
-    DEFPUSHBUTTON   "OK",IDOK,330,7,61,14
-    PUSHBUTTON      "Cancel",IDCANCEL,330,25,61,14
-    PUSHBUTTON      "Add Binding...",IDADDBINDING,329,60,62,14
-    PUSHBUTTON      "Reset",IDRESET,329,78,62,14
-    PUSHBUTTON      "Configure All...",IDCONFIGUREALL,329,43,62,14
+    DEFPUSHBUTTON   "OK",IDOK,302,7,61,14
+    PUSHBUTTON      "Cancel",IDCANCEL,302,24,61,14
+    PUSHBUTTON      "Add Binding...",IDADDBINDING,302,41,61,14
+    PUSHBUTTON      "Remove Bindings",IDRESET,302,58,61,14
+    PUSHBUTTON      "Configure All...",IDCONFIGUREALL,302,75,61,14
+    PUSHBUTTON      "Clear All",IDRESETALL,302,92,61,14
 END
 
 IDD_CONFIGUREINPUTDIALOG DIALOGEX 0, 0, 201, 62
@@ -163,7 +164,7 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,76,41,50,14,NOT WS_TABSTOP
     CTEXT           "Select the input to bind to the following emulated input:",
                     IDC_DESCRIPTION,7,7,187,13
-    CTEXT           "",IDC_INPUTLABEL,7,18,187,13
+    CTEXT           "",IDC_INPUTLABEL,7,20,187,13
 END
 
 
@@ -178,9 +179,9 @@ BEGIN
     IDD_OPTIONSDIALOG, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 391
+        RIGHTMARGIN, 363
         TOPMARGIN, 7
-        BOTTOMMARGIN, 234
+        BOTTOMMARGIN, 205
     END
 
     IDD_CONFIGUREINPUTDIALOG, DIALOG
@@ -202,6 +203,8 @@ END
 IDR_ACCELERATOR ACCELERATORS 
 BEGIN
     VK_RETURN,      ID_VIEW_FULLSCREENMODE, VIRTKEY, ALT, NOINVERT
+    "O",            ID_FILE_OPEN,           VIRTKEY, CONTROL, NOINVERT
+    "P",            ID_VIEW_PAUSE,          VIRTKEY, ALT, NOINVERT
 END
 
 

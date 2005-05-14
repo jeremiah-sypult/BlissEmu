@@ -17,13 +17,13 @@ public:
 	
     virtual void poll() = 0;
 	
-    virtual INT32 evaluateForAnyInput() = 0;
-
     virtual INT32 getInputCount() = 0;
 
     virtual const CHAR* getInputName(INT32) = 0;
 
     virtual float getValue(INT32 enumeration) = 0;
+
+    virtual BOOL isKeyboardDevice() = 0;
 
 private:
     GUID guid;

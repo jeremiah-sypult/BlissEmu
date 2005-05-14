@@ -29,6 +29,8 @@ public:
     INT32 getInputCount();
     INT32 getInput(int i);
     
+    virtual BOOL isKeyboardDevice() { return TRUE; }
+
 private:
     IDirectInputDevice8* keyboardDevice;
 	CHAR state[KEYBOARD_OBJECT_COUNT];

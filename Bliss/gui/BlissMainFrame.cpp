@@ -14,6 +14,8 @@
 #define new DEBUG_NEW
 #endif
 
+#define MOUSE_CURSOR_TIMEOUT 1000
+
 IMPLEMENT_DYNAMIC(BlissMainFrame, CFrameWnd)
 
 BEGIN_MESSAGE_MAP(BlissMainFrame, CFrameWnd)
@@ -35,6 +37,9 @@ BEGIN_MESSAGE_MAP(BlissMainFrame, CFrameWnd)
     ON_WM_ENTERMENULOOP()
     ON_WM_EXITMENULOOP()
     ON_WM_KEYDOWN()
+    ON_WM_SETFOCUS()
+    ON_WM_MOUSEMOVE()
+    ON_WM_TIMER()
 END_MESSAGE_MAP()
 
 
@@ -49,7 +54,8 @@ BlissMainFrame::BlissMainFrame()
     currentRip(NULL),
     openDialog(NULL),
     optionsDialog(NULL),
-    menuInFullscreen(TRUE)
+    menuInFullscreen(TRUE),
+    cursorShowing(TRUE)
 {
     //configure the presentation parameters
 	ZeroMemory(&presentParams, sizeof(presentParams));
@@ -171,7 +177,7 @@ void BlissMainFrame::OnPaint()
     GetClientRect(&r);
     CBrush b(RGB(0,0,0));
 	dc.FillRect(&r, &b);
-    if (currentEmu && CheckDevice()) {
+    if (currentEmu && direct3dDevice->TestCooperativeLevel() == D3D_OK) {
 		//render and display the video
 		direct3dDevice->BeginScene();
 		currentEmu->Render();
@@ -237,24 +243,27 @@ void BlissMainFrame::LoadAndRunRip(const CHAR* filename)
         delete[] title;
     }
 
-    if (runState >= Paused) {
-        //the run method is already in progress, so just re-initialize it and return
-        if (!InitializeEmulator())
-            runState = Stopped;
-        InitializeEmulatorInputs();
-    }
-    else {
-        if (!InitializeEmulator())
-            return;
-        InitializeEmulatorInputs();
-        Run();
-        ReleaseEmulatorInputs();
-        ReleaseEmulator();
-        SetWindowText("Bliss");
-        if (currentRip) {
-            delete currentRip;
-            currentRip = NULL;
-        }
+    switch (runState) {
+        case Paused:
+            runState = Running;
+            directSoundBuffer->SetVolume(DSBVOLUME_MAX);
+        case Running:
+            //the run method is already in progress, so just re-initialize it and return
+            if (!InitializeEmulator())
+                runState = Stopped;
+            InitializeEmulatorInputs();
+            default:
+            if (!InitializeEmulator())
+                return;
+            InitializeEmulatorInputs();
+            Run();
+            ReleaseEmulatorInputs();
+            ReleaseEmulator();
+            SetWindowText("Bliss");
+            if (currentRip) {
+                delete currentRip;
+                currentRip = NULL;
+            }
     }
 }
 
@@ -361,8 +370,6 @@ void BlissMainFrame::OnFileReset()
 
 void BlissMainFrame::OnFileClose()
 {
-    //if (!presentParams.Windowed)
-    //    UnlockWindowUpdate();
     runState = Stopped;
     this->RedrawWindow();
 }
@@ -414,14 +421,12 @@ void BlissMainFrame::Run()
 		currentEmu->Run();
 
 		//render and display the video
-		direct3dDevice->BeginScene();
-		currentEmu->Render();
-		direct3dDevice->EndScene();
-		direct3dDevice->Present(NULL, NULL, NULL, NULL);
-        /*
-        if (!presentParams.Windowed && menuInFullscreen)
-            DrawMenuBar();
-        */
+        if (direct3dDevice->TestCooperativeLevel() == D3D_OK) {
+		    direct3dDevice->BeginScene();
+		    currentEmu->Render();
+		    direct3dDevice->EndScene();
+		    direct3dDevice->Present(NULL, NULL, NULL, NULL);
+        }
 
         //flush the audio
         currentEmu->FlushAudio();
@@ -435,6 +440,7 @@ void BlissMainFrame::Run()
 			DispatchMessage(&msg); 
 		}
 
+
 		while (runState == Paused && GetMessage(&msg, m_hWnd,  0, 0))  {
             if (PreTranslateMessage(&msg))
                 continue;
@@ -442,12 +448,14 @@ void BlissMainFrame::Run()
 			TranslateMessage(&msg); 
 			DispatchMessage(&msg); 
 		}
-
-        //make sure we still have the d3d device
-        if (!CheckDevice())
-            runState = Stopped;
-	}
+    }
     directSoundBuffer->Stop();
+}
+
+void BlissMainFrame::OnSetFocus(CWnd*)
+{
+    //make sure we still have the d3d device
+    ReacquireDevice();
 }
 
 HRESULT BlissMainFrame::InitializeDirect3D()
@@ -592,53 +600,37 @@ void BlissMainFrame::InitializePeripheralInputs(Peripheral* periph)
     UINT16 count = periph->GetInputConsumerCount();
     for (UINT16 i = 0; i < count; i++) {
         InputConsumer* nextInputConsumer = periph->GetInputConsumer(i);
+
         //iterate through each object on this consumer (buttons, keys, etc.)
         int iccount = nextInputConsumer->getInputConsumerObjectCount();
         for (int j = 0; j < iccount; j++) {
             InputConsumerObject* nextObject = nextInputConsumer->getInputConsumerObject(j);
-
-            //find the producer to bind with this object
-            GUID g = nextObject->getDefaultDeviceGuid();
-            CHAR* key = new CHAR[strlen(nextInputConsumer->getName()) + strlen(nextObject->getName()) + 13];
-            strcpy(key, nextInputConsumer->getName());
-            strcat(key, ".");
-            strcat(key, nextObject->getName());
-            strcat(key, ".DeviceGUID");
-            UINT8* buffer;
-            UINT32 size;
-            theApp.GetProfileBinary("Input", key, &buffer, &size);
-            delete[] key;
-            if (buffer != NULL) {
-                if (size == sizeof(GUID))
-                    memcpy(&g, buffer, sizeof(GUID));
-                delete[] buffer;
-            }
-            InputProducer* producer = manager->acquireInputProducer(g);
-            if (producer == NULL) {
-                nextObject->setDeviceInput(NULL, -1);
-                continue;
-            }
-
-            //now get the input enum associated with this object
-            INT32 e = nextObject->getEnum();
-            if (e < 0 || e >= producer->getInputCount()) { 
-                e = nextObject->getDefaultEnum();
-                CHAR* key = new CHAR[strlen(nextInputConsumer->getName()) + strlen(nextObject->getName()) + 12];
-                strcpy(key, nextInputConsumer->getName());
-                strcat(key, ".");
-                strcat(key, nextObject->getName());
-                strcat(key, ".InputEnum");
-                e = theApp.GetProfileInt("Input", key, e);
-                delete[] key;
-                if (e < 0 || e >= producer->getInputCount()) {
-                    nextObject->setDeviceInput(NULL, -1);
-                    continue;
-                }
-            }
-
-            //attach the desired producer enum to the consumer object
-            nextObject->setDeviceInput(producer, e);
+            InputConfiguration* inputConfig = configuration.LoadInputConfiguration(nextInputConsumer, nextObject);
+            BindInputConfiguration(inputConfig, nextObject);
+            configuration.ReleaseInputConfiguration(inputConfig);
         }
+    }
+}
+
+void BlissMainFrame::BindInputConfiguration(InputConfiguration* inputConfig, InputConsumerObject* inputObject)
+{
+    inputObject->clearBindings();
+    InputProducer** producerList = NULL;
+    for (int k = 0; k < inputConfig->bindingCount; k++) {
+        producerList = new InputProducer*[inputConfig->subBindingCounts[k]];
+        BOOL success = TRUE;
+        for (int l = 0; l < inputConfig->subBindingCounts[k]; l++) {
+            producerList[l] = manager->acquireInputProducer(inputConfig->producerIDs[k][l]);
+            if (producerList[l] == NULL) {
+                success = FALSE;
+                break;
+            }
+        }
+        if (success)
+            inputObject->addBinding(producerList, inputConfig->objectIDs[k],
+                    inputConfig->subBindingCounts[k]);
+
+        delete[] producerList;
     }
 }
 
@@ -663,7 +655,7 @@ void BlissMainFrame::ReleasePeripheralInputs(Peripheral* periph)
         int iccount = nextInputConsumer->getInputConsumerObjectCount();
         for (int j = 0; j < iccount; j++) {
             InputConsumerObject* nextObject = nextInputConsumer->getInputConsumerObject(j);
-            nextObject->setDeviceInput(NULL, -1);
+            nextObject->clearBindings();
         }
     }
 }
@@ -819,10 +811,22 @@ void BlissMainFrame::SetFullScreen(BOOL fullScreen)
 
     if (runState == Running)
        directSoundBuffer->SetVolume(DSBVOLUME_MAX);
+
+    if (presentParams.Windowed) {
+        if (!cursorShowing) {
+            while(ShowCursor(TRUE) <= 0);
+            cursorShowing = TRUE;
+        }
+    }
+    else
+        SetTimer(1, MOUSE_CURSOR_TIMEOUT, NULL);
 }
 
-BOOL BlissMainFrame::CheckDevice()
+BOOL BlissMainFrame::ReacquireDevice()
 {
+    if (!direct3dDevice)
+        return FALSE;
+
     HRESULT res = direct3dDevice->TestCooperativeLevel();
     if (res == D3D_OK)
         return TRUE;
@@ -884,6 +888,25 @@ void BlissMainFrame::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
         OnFullScreenMode();
 
     CFrameWnd::OnKeyDown(nChar, nRepCnt, nFlags);
+}
+
+void BlissMainFrame::OnMouseMove(UINT, CPoint)
+{
+    if (!cursorShowing) {
+        while(ShowCursor(TRUE) <= 0);
+        cursorShowing = TRUE;
+    }
+    if (!presentParams.Windowed)
+        this->SetTimer(1, MOUSE_CURSOR_TIMEOUT, NULL);
+}
+
+void BlissMainFrame::OnTimer(UINT)
+{
+    if (!presentParams.Windowed) {
+        while(ShowCursor(FALSE) >= 0);
+        cursorShowing = FALSE;
+    }
+    this->KillTimer(1);
 }
 
 #ifdef _DEBUG

@@ -8,6 +8,7 @@
 #include <mmreg.h>
 #include <dsound.h>
 #include "BlissOptionsDialog.h"
+#include "BlissConfiguration.h"
 #include "core/Emulator.h"
 #include "core/input/InputProducerManager.h"
 
@@ -46,6 +47,9 @@ protected:
     afx_msg void OnEnterMenuLoop(BOOL);
     afx_msg void OnExitMenuLoop(BOOL);
     afx_msg void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
+    afx_msg void OnSetFocus(CWnd*);
+    afx_msg void OnMouseMove(UINT, CPoint);
+    afx_msg void OnTimer(UINT);
 
 private:
     BOOL LoadRip(const CHAR*);
@@ -65,8 +69,9 @@ private:
     void ReleaseDirect3D();
     void ReleaseDirectSound();
     void ReleaseDirectInput();
-    BOOL CheckDevice();
+    BOOL ReacquireDevice();
     void SetPaused(BOOL paused);
+    void BindInputConfiguration(InputConfiguration*, InputConsumerObject*);
 
     //configuration stuff
     LRESULT OnStartUp();
@@ -80,6 +85,7 @@ private:
     Rip* currentRip;
     WINDOWPLACEMENT wp;
     BOOL menuInFullscreen;
+    BOOL cursorShowing;
 
 	//DirectX stuff
 	D3DPRESENT_PARAMETERS presentParams;

@@ -41,6 +41,8 @@ class ECSKeyboard : public AY38914_InputOutput, public InputConsumer
         UINT16        rowsToScan;
         UINT16        rowInputValues[8];
 
+        static const INT32         sortedObjectIndices[NUM_ECS_OBJECTS];
+
 };
 
 #endif
