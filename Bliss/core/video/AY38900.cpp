@@ -603,12 +603,16 @@ void AY38900::setVideoOutputDevice(IDirect3DDevice9* vod)
 		videoOutputDevice->CreateVertexBuffer(6*sizeof(CUSTOMVERTEX), 0, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &vertexBuffer, NULL);
 		CUSTOMVERTEX vertices[] =
 		{
-			{   0.0f,                0.0f,               1.0f, 1.0f, 0.0f, 0.0f, }, // x, y, z, rhw, tu, tv
-			{   (FLOAT)desc.Width,   0.0f,               1.0f, 1.0f, 1.0f, 0.0f, },
-	        {   0.0f,                (FLOAT)desc.Height, 1.0f, 1.0f, 0.0f, 1.0f, },
-	      /*{   (FLOAT)desc.Width,   0.0f,               1.0f, 1.0f, 1.0f, 0.0f, },*/
-			{   (FLOAT)desc.Width,   (FLOAT)desc.Height, 1.0f, 1.0f, 1.0f, 1.0f, },
-	      /*{   0.0f,                (FLOAT)desc.Height, 1.0f, 1.0f, 0.0f, 1.0f, },*/
+            /*
+			{   0.01f,                       0.01f,                      1.0f, 1.0f, 0.0f, 0.0f, }, // x, y, z, rhw, tu, tv
+			{   ((FLOAT)desc.Width)-0.01f,   0.01f,                      1.0f, 1.0f, 1.0f, 0.0f, },
+	        {   0.01f,                       ((FLOAT)desc.Height)-0.01f, 1.0f, 1.0f, 0.0f, 1.0f, },
+			{   ((FLOAT)desc.Width)-0.01f,   ((FLOAT)desc.Height)-0.01f, 1.0f, 1.0f, 1.0f, 1.0f, },
+            */
+			{   0.0f,                0.0f,              1.0f, 1.0f, -0.001f, -0.001f, }, // x, y, z, rhw, tu, tv
+			{   (FLOAT)desc.Width,   0.0f,              1.0f, 1.0f,  1.001f, -0.001f, },
+	        {   0.0f,               (FLOAT)desc.Height, 1.0f, 1.0f, -0.001f,  1.001f, },
+			{   (FLOAT)desc.Width,  (FLOAT)desc.Height, 1.0f, 1.0f,  1.001f,  1.001f, },
 		};
 		bb->Release();
 		void* pVertices;
@@ -642,9 +646,11 @@ void AY38900::render()
 	videoOutputDevice->SetTexture(0, combinedTexture);
 	videoOutputDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
 	videoOutputDevice->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-    videoOutputDevice->SetTextureStageState( 0, D3DTSS_ALPHAOP,   D3DTOP_DISABLE );
+    videoOutputDevice->SetTextureStageState(0, D3DTSS_ALPHAOP,   D3DTOP_DISABLE);
 	videoOutputDevice->SetFVF(D3DFVF_CUSTOMVERTEX);
     videoOutputDevice->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
+    videoOutputDevice->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+    videoOutputDevice->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
 	videoOutputDevice->SetStreamSource(0, vertexBuffer, 0, sizeof(CUSTOMVERTEX));
 	videoOutputDevice->DrawPrimitive(D3DPT_TRIANGLESTRIP, 0, 2);
 }

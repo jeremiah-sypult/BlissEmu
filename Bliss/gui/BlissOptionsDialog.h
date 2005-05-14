@@ -6,6 +6,7 @@
 #include "core/input/InputConsumerObject.h"
 #include "core/input/InputProducerManager.h"
 #include "BlissConfiguration.h"
+#include "DlgResizeHelper.h"
 
 typedef struct _Binding Binding;
 
@@ -14,6 +15,7 @@ class BlissOptionsDialog : public CDialog
 public:
     BlissOptionsDialog(CWnd* parent = NULL);
 
+    BOOL OnInitDialog();
     afx_msg void OnShowWindow( BOOL, UINT );
     afx_msg void OnSelectionChanged(NMHDR* pNotifyStruct, LRESULT* result);
     afx_msg void OnConfigureInput(NMHDR* pNotifyStruct, LRESULT* result);
@@ -40,6 +42,8 @@ private:
     InputProducerManager* manager;
     InputConfiguration** inputConfigs[3];
     INT32 inputObjectCounts[3];
+
+    DlgResizeHelper resizeHelper;
 
 	DECLARE_DYNAMIC(BlissOptionsDialog);
     DECLARE_MESSAGE_MAP();

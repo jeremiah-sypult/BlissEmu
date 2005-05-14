@@ -64,12 +64,28 @@ void BlissOptionsDialog::OnDestroy()
     }
 }
 
+BOOL BlissOptionsDialog::OnInitDialog()
+{
+    CDialog::OnInitDialog();
+    HICON hIcon = theApp.LoadIcon(IDR_MAINFRAME);
+    SetIcon(hIcon, TRUE);
+
+    resizeHelper.Init(m_hWnd);
+    resizeHelper.Fix(this->GetDlgItem(IDOK)->m_hWnd, DlgResizeHelper::kWidthRight, DlgResizeHelper::kHeightTop);
+    resizeHelper.Fix(this->GetDlgItem(IDCANCEL)->m_hWnd, DlgResizeHelper::kWidthRight, DlgResizeHelper::kHeightTop);
+    resizeHelper.Fix(this->GetDlgItem(IDADDBINDING)->m_hWnd, DlgResizeHelper::kWidthRight, DlgResizeHelper::kHeightTop);
+    resizeHelper.Fix(this->GetDlgItem(IDRESET)->m_hWnd, DlgResizeHelper::kWidthRight, DlgResizeHelper::kHeightTop);
+    resizeHelper.Fix(this->GetDlgItem(IDCONFIGUREALL)->m_hWnd, DlgResizeHelper::kWidthRight, DlgResizeHelper::kHeightTop);
+    resizeHelper.Fix(this->GetDlgItem(IDRESETALL)->m_hWnd, DlgResizeHelper::kWidthRight, DlgResizeHelper::kHeightTop);
+    resizeHelper.Fix(GetListCtrl()->m_hWnd, DlgResizeHelper::kRight, DlgResizeHelper::kTopBottom);
+    resizeHelper.Fix(GetTreeCtrl()->m_hWnd, DlgResizeHelper::kNoHFix, DlgResizeHelper::kTopBottom);
+
+    return TRUE;
+}
+
 void BlissOptionsDialog::OnShowWindow(BOOL b, UINT i)
 {
     CDialog::OnShowWindow(b, i);
-
-    HICON hIcon = theApp.LoadIcon(IDR_MAINFRAME);
-    SetIcon(hIcon, TRUE);
 
     CenterWindow();
     
@@ -395,41 +411,45 @@ void BlissOptionsDialog::SaveConfiguredBindings(InputConsumer* nextIc)
     }
 }
 
-void BlissOptionsDialog::OnSize(UINT, int cx, int cy)
+void BlissOptionsDialog::OnSize(UINT nType, int cx, int cy)
 {
+    CDialog::OnSize(nType, cx, cy);
+    resizeHelper.OnSize();
+/*
     //adjust the components to fit. this is all hard-coded for now. we'll come up with something
     //more robust in the future
     CButton* nextButton = (CButton*)this->GetDlgItem(IDOK);
     if (nextButton != NULL)
-        nextButton->SetWindowPos(NULL, cx-119, 14, 0, 0, SWP_NOOWNERZORDER | SWP_NOSIZE);
+        nextButton->MoveWindow(cx-119, 14, 10, 10);
 
     nextButton = (CButton*)this->GetDlgItem(IDCANCEL);
     if (nextButton != NULL)
-        nextButton->SetWindowPos(NULL, cx-119, 48, 0, 0, SWP_NOOWNERZORDER | SWP_NOSIZE);
+        nextButton->MoveWindow(cx-119, 48, 10, 10);
 
     nextButton = (CButton*)this->GetDlgItem(IDADDBINDING);
     if (nextButton != NULL)
-        nextButton->SetWindowPos(NULL, cx-119, 82, 0, 0, SWP_NOOWNERZORDER | SWP_NOSIZE);
+        nextButton->MoveWindow(cx-119, 82, 10, 10);
 
     nextButton = (CButton*)this->GetDlgItem(IDRESET);
     if (nextButton != NULL)
-        nextButton->SetWindowPos(NULL, cx-119, 116, 0, 0, SWP_NOOWNERZORDER | SWP_NOSIZE);
+        nextButton->MoveWindow(cx-119, 116, 10, 10);
 
     nextButton = (CButton*)this->GetDlgItem(IDCONFIGUREALL);
     if (nextButton != NULL)
-        nextButton->SetWindowPos(NULL, cx-119, 150, 0, 0, SWP_NOOWNERZORDER | SWP_NOSIZE);
+        nextButton->MoveWindow(cx-119, 150, 10, 10);
 
     nextButton = (CButton*)this->GetDlgItem(IDRESETALL);
     if (nextButton != NULL)
-        nextButton->SetWindowPos(NULL, cx-119, 184, 0, 0, SWP_NOOWNERZORDER | SWP_NOSIZE);
+        nextButton->MoveWindow(cx-119, 184, 10, 10);
 
     CListCtrl* list = GetListCtrl();
     if (list != NULL)
-        list->SetWindowPos(NULL, 0, 0, cx-324, cy-30, SWP_NOOWNERZORDER | SWP_NOMOVE);
+        list->MoveWindow(10, 10, cx-324, cy-30);
 
     CTreeCtrl* tree = GetTreeCtrl();
     if (tree != NULL)
-        tree->SetWindowPos(NULL, 0, 0, 179, cy-30, SWP_NOOWNERZORDER | SWP_NOMOVE);
+        tree->MoveWindow(10, 10, 179, cy-30);
+*/
 }
 
 CTreeCtrl* BlissOptionsDialog::GetTreeCtrl()

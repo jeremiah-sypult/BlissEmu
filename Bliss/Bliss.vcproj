@@ -177,6 +177,12 @@
 				RelativePath=".\gui\ConfigureInputDialog.h">
 			</File>
 			<File
+				RelativePath=".\gui\DlgResizeHelper.cpp">
+			</File>
+			<File
+				RelativePath=".\gui\DlgResizeHelper.h">
+			</File>
+			<File
 				RelativePath=".\gui\Resource.h">
 			</File>
 			<File

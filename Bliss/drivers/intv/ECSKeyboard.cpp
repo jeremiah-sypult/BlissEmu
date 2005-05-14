@@ -40,7 +40,7 @@ ECSKeyboard::ECSKeyboard(INT32 id)
     inputConsumerObjects[21] = new InputConsumerObject(sortedObjectIndices[i++], "R", GUID_SysKeyboard, DIK_R);
     inputConsumerObjects[22] = new InputConsumerObject(sortedObjectIndices[i++], "W", GUID_SysKeyboard, DIK_W);
     inputConsumerObjects[23] = new InputConsumerObject(sortedObjectIndices[i++], "Q", GUID_SysKeyboard, DIK_Q);
-    inputConsumerObjects[24] = new InputConsumerObject(sortedObjectIndices[i++], "Escape", GUID_SysKeyboard, DIK_ESCAPE);
+    inputConsumerObjects[24] = new InputConsumerObject(sortedObjectIndices[i++], "Escape", GUID_SysKeyboard, DIK_GRAVE);
     inputConsumerObjects[25] = new InputConsumerObject(sortedObjectIndices[i++], "9", GUID_SysKeyboard, DIK_NUMPAD9);
     inputConsumerObjects[26] = new InputConsumerObject(sortedObjectIndices[i++], "7", GUID_SysKeyboard, DIK_NUMPAD7);
     inputConsumerObjects[27] = new InputConsumerObject(sortedObjectIndices[i++], "5", GUID_SysKeyboard, DIK_NUMPAD5);
