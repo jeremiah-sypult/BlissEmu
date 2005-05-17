@@ -1,8 +1,11 @@
 FOR NEXT RELEASE
+- bug where I can't add bindings to the ECS keyboard default bindings; have to clear the
+  binding first because it's getting confused somehow
 
 LONG TERM VISION
 - video
-- still have that graphics glitch along the triangle seam
+    - still a video glitch along the triangle seam; see Thin Ice dead center of the title
+      screen for the glitch
     - display the window menu in fullscreen mode
     - offer the ability to display the overlays somehow, maybe as a toggle display for the
       lower left and right sides of the screen
