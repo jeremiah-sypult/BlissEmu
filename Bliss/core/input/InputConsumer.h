@@ -32,8 +32,8 @@ public:
     virtual void evaluateInputs() = 0;
 
     //functions to get descriptive info about the input consumer
-    virtual UINT32 getInputConsumerObjectCount() = 0;
-    virtual InputConsumerObject* getInputConsumerObject(int i) = 0;
+    virtual INT32 getInputConsumerObjectCount() = 0;
+    virtual InputConsumerObject* getInputConsumerObject(INT32 i) = 0;
 
 private:
     INT32 id;

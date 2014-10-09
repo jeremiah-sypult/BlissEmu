@@ -3,6 +3,7 @@
 #include "BlissApp.h"
 #include "BlissMainFrame.h"
 #include "BlissCommandLine.h"
+#include "drivers/intv/Intellivision.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -59,11 +60,15 @@ BOOL BlissApp::InitInstance()
     if (strlen(cmdInfo.m_strFileName))
         pFrame->LoadAndRunRip(cmdInfo.m_strFileName);
 
+    initCGC();
+
 	return TRUE;
 }
 
 int BlissApp::ExitInstance()
 {
+    releaseCGC();
+
     delete m_pMainWnd;
     m_pMainWnd = NULL;
 

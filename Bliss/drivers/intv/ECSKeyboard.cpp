@@ -72,12 +72,12 @@ ECSKeyboard::~ECSKeyboard()
         delete inputConsumerObjects[i];
 }
 
-UINT32 ECSKeyboard::getInputConsumerObjectCount()
+INT32 ECSKeyboard::getInputConsumerObjectCount()
 {
     return NUM_ECS_OBJECTS;
 }
 
-InputConsumerObject* ECSKeyboard::getInputConsumerObject(int i)
+InputConsumerObject* ECSKeyboard::getInputConsumerObject(INT32 i)
 {
     return inputConsumerObjects[sortedObjectIndices[i]];
 }

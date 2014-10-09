@@ -104,7 +104,7 @@ UINT16 RAM::getWriteAddressMask()
 UINT16 RAM::peek(UINT16 location)
 {
     if (enabled)
-        return image[location-this->location];
+        return image[(location&readAddressMask)-this->location];
     else
         return 0xFFFF;
 }
@@ -112,6 +112,6 @@ UINT16 RAM::peek(UINT16 location)
 void RAM::poke(UINT16 location, UINT16 value)
 {
     if (enabled)
-        image[location-this->location] = (value & trimmer);
+        image[(location&writeAddressMask)-this->location] = (value & trimmer);
 }
 

@@ -30,8 +30,8 @@ class ECSKeyboard : public AY38914_InputOutput, public InputConsumer
         void evaluateInputs();
 
         //functions to get descriptive info about the input consumer
-        UINT32 getInputConsumerObjectCount();
-        InputConsumerObject* getInputConsumerObject(int i);
+        INT32 getInputConsumerObjectCount();
+        InputConsumerObject* getInputConsumerObject(INT32 i);
 
         UINT16 getInputValue();
         void setOutputValue(UINT16 value);

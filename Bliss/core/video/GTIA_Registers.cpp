@@ -2,11 +2,8 @@
 #include "GTIA_Registers.h"
 #include "GTIA.h"
 
-UINT16 GTIA_ALIASES[8] = {
-    0xC000, 0xC020, 0xC040, 0xC060, 0xC080, 0xC0A0, 0xC0C0, 0xC0E0
-};
-
 GTIA_Registers::GTIA_Registers()
+: RAM(0x20, 0xC000, 0xFF1F, 0xFF1F, 8)
 {
     gtia = NULL;
 }
@@ -14,118 +11,88 @@ GTIA_Registers::GTIA_Registers()
 void GTIA_Registers::init(GTIA* g)
 {
     gtia = g;
-}
-
-UINT16 GTIA_Registers::getReadSize()
-{
-    return 0x20;
-}
-
-UINT16 GTIA_Registers::getReadAddress()
-{
-    return 0xC000;
-}
-
-UINT16 GTIA_Registers::getReadAddressMask()
-{
-    return 0xFF1F;
-}
-
-UINT16 GTIA_Registers::getWriteSize()
-{
-    return 0x20;
-}
-
-UINT16 GTIA_Registers::getWriteAddress()
-{
-    return 0xC000;
-}
-
-UINT16 GTIA_Registers::getWriteAddressMask()
-{
-    return 0xFF1F;
-}
+}   
 
 void GTIA_Registers::poke(UINT16 addr, UINT16 value)
 {
-    switch (addr) {
+    switch (addr & 0x1F) {
         case 0x00:
-            gtia->HPOSP0 = (UINT8)value;
+            gtia->HPOSP[0] = (UINT8)value;
             break;
         case 0x01:
-            gtia->HPOSP1 = (UINT8)value;
+            gtia->HPOSP[1] = (UINT8)value;
             break;
         case 0x02:
-            gtia->HPOSP2 = (UINT8)value;
+            gtia->HPOSP[2] = (UINT8)value;
             break;
         case 0x03:
-            gtia->HPOSP3 = (UINT8)value;
+            gtia->HPOSP[3] = (UINT8)value;
             break;
         case 0x04:
-            gtia->HPOSM0 = (UINT8)value;
+            gtia->HPOSM[0] = (UINT8)value;
             break;
         case 0x05:
-            gtia->HPOSM1 = (UINT8)value;
+            gtia->HPOSM[1] = (UINT8)value;
             break;
         case 0x06:
-            gtia->HPOSM2 = (UINT8)value;
+            gtia->HPOSM[2] = (UINT8)value;
             break;
         case 0x07:
-            gtia->HPOSM3 = (UINT8)value;
+            gtia->HPOSM[3] = (UINT8)value;
             break;
         case 0x08:
-            gtia->SIZEP0 = (UINT8)value;
+            gtia->SIZEP[0] = (UINT8)value;
             break;
         case 0x09:
-            gtia->SIZEP1 = (UINT8)value;
+            gtia->SIZEP[1] = (UINT8)value;
             break;
         case 0x0A:
-            gtia->SIZEP2 = (UINT8)value;
+            gtia->SIZEP[2] = (UINT8)value;
             break;
         case 0x0B:
-            gtia->SIZEP3 = (UINT8)value;
+            gtia->SIZEP[3] = (UINT8)value;
             break;
         case 0x0C:
             gtia->SIZEM = (UINT8)value;
             break;
         case 0x0D:
-            gtia->GRAFP0 = (UINT8)value;
+            gtia->GRAFP[0] = (UINT8)value;
             break;
         case 0x0E:
-            gtia->GRAFP1 = (UINT8)value;
+            gtia->GRAFP[1] = (UINT8)value;
             break;
         case 0x0F:
-            gtia->GRAFP2 = (UINT8)value;
+            gtia->GRAFP[2] = (UINT8)value;
             break;
         case 0x10:
-            gtia->GRAFP3 = (UINT8)value;
+            gtia->GRAFP[3] = (UINT8)value;
             break;
         case 0x11:
             gtia->GRAFM = (UINT8)value;
             break;
         case 0x12:
-            gtia->COLPM0 = (UINT8)value;
+            gtia->COLPM[0] = (UINT8)value;
             break;
         case 0x13:
-            gtia->COLPM1 = (UINT8)value;
+            gtia->COLPM[1] = (UINT8)value;
             break;
         case 0x14:
-            gtia->COLPM2 = (UINT8)value;
+            gtia->COLPM[2] = (UINT8)value;
             break;
         case 0x15:
-            gtia->COLPM3 = (UINT8)value;
+            gtia->COLPM[3] = (UINT8)value;
             break;
         case 0x16:
-            gtia->COLPF0 = (UINT8)value;
+            gtia->COLPF[0] = (UINT8)value;
             break;
         case 0x17:
-            gtia->COLPF1 = (UINT8)value;
+            gtia->COLPF[1] = (UINT8)value;
             break;
         case 0x18:
-            gtia->COLPF2 = (UINT8)value;
+            gtia->COLPF[2] = (UINT8)value;
             break;
         case 0x19:
-            gtia->COLPF3 = (UINT8)value;
+            gtia->COLPF[3] = (UINT8)value;
             break;
         case 0x1A:
             gtia->COLBK = (UINT8)value;
@@ -150,8 +117,71 @@ void GTIA_Registers::poke(UINT16 addr, UINT16 value)
 
 UINT16 GTIA_Registers::peek(UINT16 addr)
 {
-    switch (addr) {
-		case 0:				// Suppress 'default only' compiler warning
+    switch (addr & 0x1F) {
+        case 0x00:
+            return gtia->MPF[0];
+        case 0x01:
+            return gtia->MPF[1];
+        case 0x02:
+            return gtia->MPF[2];
+        case 0x03:
+            return gtia->MPF[3];
+        case 0x04:
+            return gtia->PPF[0];
+        case 0x05:
+            return gtia->PPF[1];
+        case 0x06:
+            return gtia->PPF[2];
+        case 0x07:
+            return gtia->PPF[3];
+        case 0x08:
+            return gtia->MPL[0];
+        case 0x09:
+            return gtia->MPL[1];
+        case 0x0A:
+            return gtia->MPL[2];
+        case 0x0B:
+            return gtia->MPL[3];
+        case 0x0C:
+            return gtia->PPL[0];
+        case 0x0D:
+            return gtia->PPL[1];
+        case 0x0E:
+            return gtia->PPL[2];
+        case 0x0F:
+            return gtia->PPL[3];
+        case 0x10:
+            return gtia->TRIG[0];
+        case 0x11:
+            return gtia->TRIG[1];
+        case 0x12:
+            return gtia->TRIG[2];
+        case 0x13:
+            return gtia->TRIG[3];
+        case 0x14:
+            return 0x0E;
+        case 0x15:
+            return 0;
+        case 0x16:
+            return 0;
+        case 0x17:
+            return 0;
+        case 0x18:
+            return 0;
+        case 0x19:
+            return 0;
+        case 0x1A:
+            return 0;
+        case 0x1B:
+            return 0;
+        case 0x1C:
+            return 0;
+        case 0x1D:
+            return 0;
+        case 0x1E:
+            return 0;
+        case 0x1F:
+            return gtia->CONSOL;
         default:
             return 0xFF;
     }

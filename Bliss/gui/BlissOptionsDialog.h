@@ -40,8 +40,8 @@ private:
 
     ConfigureInputDialog* configureInputDialog;
     InputProducerManager* manager;
-    InputConfiguration** inputConfigs[3];
-    INT32 inputObjectCounts[3];
+    InputConfiguration** inputConfigs[5];
+    INT32 inputObjectCounts[5];
 
     DlgResizeHelper resizeHelper;
 

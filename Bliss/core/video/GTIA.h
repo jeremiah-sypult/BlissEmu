@@ -7,6 +7,52 @@
 
 class GTIA : public Processor
 {
+    friend class GTIA_Registers;
+    friend class Antic;
+
+public:
+    GTIA();
+    
+    void resetProcessor();
+
+    INT32 getClockSpeed() { return 1; }
+
+    INT32 tick(INT32 minimum) { return minimum; }
+
+    //this function accepts four half-clocks from the Antic and processes them.
+    //in some GTIA modes, some of the half-clocks are ignored
+    //void process(UINT16 location, UINT8 an0, UINT8 an1, UINT8 an2, UINT8 an3);
+    
+    GTIA_Registers registers;
+
+private:
+    UINT8 imageBank[320*240];
+
+    UINT8 HPOSP[4];
+    UINT8 HPOSM[4];
+    UINT8 SIZEP[4];
+    UINT8 SIZEM;
+    UINT8 GRAFP[4];
+    UINT8 GRAFM;
+    UINT8 COLPM[4];
+    UINT8 COLPF[4];
+    UINT8 COLBK;
+    UINT8 PRIOR;
+    UINT8 VDELAY;
+    UINT8 GRACTL;
+    UINT8 MPF[4];
+    UINT8 PPF[4];
+    UINT8 MPL[4];
+    UINT8 PPL[4];
+    UINT8 TRIG[4];
+    UINT8 CONSOL;
+};
+
+#endif
+
+/*
+class GTIA : public Processor
+{
 
     friend class Antic;
     friend class GTIA_Registers;
@@ -58,5 +104,5 @@ class GTIA : public Processor
         UINT8 CONSOL;
 
 };
+*/
 
-#endif

@@ -2,21 +2,17 @@
 #ifndef POKEY_REGISTERS_H
 #define POKEY_REGISTERS_H
 
-#include "core/memory/Memory.h"
+#include "core/memory/RAM.h"
 
 class Pokey;
 
-class Pokey_Registers : Memory
+class Pokey_Registers : public RAM
 {
 
     public:
         Pokey_Registers();
         void init(Pokey* p);
-        UINT16 getSize();
-        UINT16 getNumLocations();
-        UINT16 getLocation(UINT16 i);
-        BOOL isLocationReadable(UINT16 i);
-        BOOL isLocationWriteable(UINT16 i);
+
         void poke(UINT16 addr, UINT16 value);
         UINT16 peek(UINT16 addr);
 

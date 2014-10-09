@@ -151,17 +151,17 @@ UINT16 ROM::peek(UINT16 location)
 
 UINT16 ROM::peek1(UINT16 location)
 {
-    return ((UINT8*)image)[location-this->location];
+    return ((UINT8*)image)[(location&readAddressMask)-this->location];
 }
 
 UINT16 ROM::peek2(UINT16 location)
 {
-    return ((UINT16*)image)[location-this->location];
+    return ((UINT16*)image)[(location&readAddressMask)-this->location];
 }
 
 UINT16 ROM::peek4(UINT16 location)
 {
-    return (UINT16)((UINT32*)image)[location-this->location];
+    return (UINT16)((UINT32*)image)[(location&readAddressMask)-this->location];
 }
 
 UINT16 ROM::peekN(UINT16)

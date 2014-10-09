@@ -21,10 +21,10 @@
 #include "core/memory/Memory.h"
 
 class Intellivision;
-//class Atari5200;
+class Atari5200;
 
 #define MAX_PERIPHERALS    16
-#define NUM_EMULATORS 1
+#define NUM_EMULATORS       2
 
 /**
  *
@@ -77,6 +77,7 @@ class Emulator : public Peripheral
         static UINT32 systemIDs[NUM_EMULATORS];
         static Emulator* emus[NUM_EMULATORS];
         static Intellivision inty;
+        static Atari5200     atari5200;
 
 };
 

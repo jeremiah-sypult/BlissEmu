@@ -89,7 +89,26 @@ void ProcessorBus::run()
         //tick the processor that is at the head of the queue
         int minTicks = (int)((startQueue->next->tick / startQueue->tickFactor) + 1);
         startQueue->tick = ((UINT64)startQueue->processor->tick(minTicks)) * startQueue->tickFactor;
-        reschedule(startQueue);
+
+        //now reschedule the processor for later processing
+        ScheduleQueue* tmp1 = startQueue;
+        while (tmp1->next != NULL && startQueue->tick > tmp1->next->tick) {
+            startQueue->tick -= tmp1->next->tick;
+            tmp1 = tmp1->next;
+        }
+
+        //reorganize the scheduling queue
+        ScheduleQueue* queueToShuffle = startQueue;
+        startQueue = startQueue->next;
+        queueToShuffle->previous = tmp1;
+        queueToShuffle->next = tmp1->next;
+        tmp1->next = queueToShuffle;
+        if (queueToShuffle->next != NULL) {
+            queueToShuffle->next->tick -= queueToShuffle->tick;
+            queueToShuffle->next->previous = queueToShuffle;
+        }
+        else
+            endQueue = queueToShuffle;
     }
 }
 

@@ -292,6 +292,19 @@ BOOL BlissMainFrame::LoadRip(const CHAR* filename)
         *(fileSubname+strlen(filenameStart)-4) = NULL;
         SaveRip(fileSubname);
     }
+    else if (strcmpi(extStart, ".a52") == 0)
+    {
+        //load the bin file as a Rip
+        currentRip = Rip::LoadA52(filename);
+        if (currentRip == NULL)
+            return FALSE;
+
+        CHAR fileSubname[MAX_PATH];
+        CHAR* filenameStart = strrchr(filename, '\\')+1;
+        strncpy(fileSubname, filenameStart, strlen(filenameStart)-4);
+        *(fileSubname+strlen(filenameStart)-4) = NULL;
+        SaveRip(fileSubname);
+    }
     else if (strcmpi(extStart, ".rom") == 0)
     {
         //load the rom file as a Rip

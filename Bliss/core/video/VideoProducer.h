@@ -2,7 +2,9 @@
 #ifndef VIDEOPRODUCER_H
 #define VIDEOPRODUCER_H
 
+#ifdef WIN32
 #include <d3d9.h>
+#endif
 
 /**
  * This interface is implemented by any piece of hardware that renders graphic
@@ -21,7 +23,10 @@ class VideoProducer
          * This function will be called once each time the Emulator indicates
          * that it has entered vertical blank.
          */
+
+#ifdef WIN32
         virtual void setVideoOutputDevice(IDirect3DDevice9* vod) = 0;
+#endif
         virtual void render() = 0;
 
 };

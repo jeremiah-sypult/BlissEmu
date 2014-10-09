@@ -1,5 +1,7 @@
 
 #include "HandController.h"
+#include "Intellivision.h"
+#include "cgc.h"
 
 const double PI = 3.14159265358979323846;
 
@@ -78,12 +80,12 @@ HandController::~HandController()
         delete inputConsumerObjects[i];
 }
 
-UINT32 HandController::getInputConsumerObjectCount()
+INT32 HandController::getInputConsumerObjectCount()
 {
     return NUM_HAND_CONTROLLER_OBJECTS;
 }
 
-InputConsumerObject* HandController::getInputConsumerObject(int i)
+InputConsumerObject* HandController::getInputConsumerObject(INT32 i)
 {
     return inputConsumerObjects[i];
 }
@@ -122,6 +124,24 @@ void HandController::evaluateInputs()
         UINT16 directionValue = DIRECTION_OUTPUT_VALUES[(UINT16)(
             (positionInRadians+(offset/2.0))/offset) & 0x0F];
         inputValue |= directionValue;
+    }
+
+    if (usingCGC) {
+        //also support the CGC
+        USHORT intyData;
+        L_CGCGetCookedIntyData(getId() == 0 ? CONTROLLER_0 : CONTROLLER_1, &intyData);
+
+        //decode the CGC data
+        if (intyData & 0x000F)
+            inputValue |= BUTTON_OUTPUT_VALUES[(intyData & 0x000F)-1];
+        if (intyData & 0x0010)
+            inputValue |= BUTTON_OUTPUT_VALUES[12];
+        if (intyData & 0x0020)
+            inputValue |= BUTTON_OUTPUT_VALUES[13];
+        if (intyData & 0x0040)
+            inputValue |= BUTTON_OUTPUT_VALUES[14];
+        if (intyData & 0x0080)
+            inputValue |= DIRECTION_OUTPUT_VALUES[(intyData & 0x0F00) >> 8];
     }
 
     inputValue = (UINT16)(0xFF ^ inputValue);

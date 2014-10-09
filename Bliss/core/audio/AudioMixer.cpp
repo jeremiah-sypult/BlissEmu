@@ -148,7 +148,8 @@ INT32 AudioMixer::tick(INT32 minimum)
             nextLine->commonClockCounter = -missingClocks;
         }
 
-        totalSample = totalSample / audioProducerCount;
+        if (audioProducerCount > 0)
+            totalSample = totalSample / audioProducerCount;
         sampleBuffer[sampleCount++] = (UINT8)(totalSample & 0xFF);
         sampleBuffer[sampleCount++] = (UINT8)((totalSample & 0xFF00)>>8);
     	
@@ -180,5 +181,6 @@ void AudioMixer::flushAudio()
     memcpy(buf2, sampleBuffer+bufSize1, bufSize2);
     outputBuffer->Unlock(buf1, bufSize1, buf2, bufSize2);
     outputBufferWritePosition = end;
+
     sampleCount = 0;
 }

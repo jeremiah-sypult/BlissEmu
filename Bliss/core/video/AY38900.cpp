@@ -3,7 +3,10 @@
 #include "AY38900.h"
 #include "core/cpu/ProcessorBus.h"
 
+#ifdef WIN32
 #define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZRHW|D3DFVF_TEX1)
+#endif
+
 #define MIN(v1, v2) (v1 < v2 ? v1 : v2)
 #define MAX(v1, v2) (v1 > v2 ? v1 : v2)
 
@@ -156,13 +159,12 @@ INT32 AY38900::tick(INT32 minimum) {
 
             //if the display is not enabled, skip the rest of the modes
             if (!displayEnabled) {
-                previousDisplayEnabled = FALSE;
                 if (previousDisplayEnabled) {
                     //render a blank screen
-                    for (int x = 0; x < 160; x++)
-                        for (int y = 0; x < 192; x++)
-                            ((UINT32**)combinedBufferLock.pBits)[x][y] = palette[borderColor];
+                    for (int x = 0; x < 160*192; x++)
+                        ((UINT32*)combinedBufferLock.pBits)[x] = palette[borderColor];
                 }
+                previousDisplayEnabled = FALSE;
                 mode = MODE_VBLANK;
                 totalTicks += (TICK_LENGTH_FRAME - TICK_LENGTH_VBLANK);
                 break;

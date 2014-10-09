@@ -9,25 +9,25 @@
 #include "core/memory/ROM.h"
 #include "core/video/Antic.h"
 #include "core/video/GTIA.h"
+#include "core/audio/Pokey.h"
+#include "JoyPad.h"
 
 class Atari5200 : public Emulator
 {
 
     public:
         Atari5200();
-        BOOL inVerticalBlank() { return antic.inVerticalBlank(); }
-        void setBIOSImage(UINT16* biosImage);
 
     private:
-        void init();
-
+        JoyPad      leftInput;
+        JoyPad      rightInput;
         _6502c      cpu;
         Antic       antic;
         GTIA        gtia;
+        Pokey       pokey;
 
         ROM         biosROM;
         RAM         ram;
-        RAM         pokeyRegisters;
 
 };
 

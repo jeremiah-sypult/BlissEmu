@@ -15,6 +15,103 @@
 #define ANTIC_PIN_OUT_HALT  1
 #define ANTIC_PIN_OUT_READY 2
 
+typedef enum _AnticMode AnticMode;
+
+class Antic : public Processor, public VideoProducer
+{
+    friend class Antic_Registers;
+
+public:
+    Antic_Registers registers;
+
+    Antic(MemoryBus* mb, GTIA* gt);
+        
+    void resetProcessor();
+
+    void setVideoOutputDevice(IDirect3DDevice9*);
+
+    void render();
+
+    INT32 getClockSpeed() { return 3584160; }
+
+    INT32 tick(INT32 minimum);
+    
+
+private:
+
+    void renderPlayerGraphic(UINT8* ptr, UINT8 grafx, UINT8 color);
+    
+    const static UINT8 ANBK;
+    const static UINT8 ANPF0;
+    const static UINT8 ANPF1;
+    const static UINT8 ANPF2;
+    const static UINT8 ANPF3;
+    const static UINT8 AN_SPECIAL;
+
+    const static UINT8 BLOCK_HEIGHTS[14];
+    const static UINT8 BYTE_WIDTHS[14][4];
+            
+    const static UINT32 palette[256];
+
+    MemoryBus* memoryBus;
+    GTIA* gtia;
+
+    UINT8 INST;
+    UINT8 LCOUNT;
+    UINT8 HCOUNT;
+    UINT16 MEMSCAN;
+    UINT8 MODE;
+    UINT8 BYTEWIDTH;
+    UINT8 BLOCKLENGTH;
+    UINT8* imageBank;
+
+    //registers
+    UINT8  SHIFT[48];
+    UINT8  DMACTL;
+    UINT8  CHACTL;
+    UINT16 DLIST;
+    UINT8  HSCROL;
+    UINT8  VSCROL;
+    UINT8  PMBASE;
+    UINT8  CHBASE;
+    UINT16 VCOUNT;
+    UINT8  NMIEN;
+    UINT8  NMIST;
+    
+    AnticMode anticMode;
+    
+    UINT16 cyclesToSteal;
+    //private AnticMode afterCycleStealingMode;
+
+    IDirect3DDevice9*       videoOutputDevice;
+    IDirect3DTexture9*      combinedTexture;
+    IDirect3DVertexBuffer9* vertexBuffer;
+    D3DLOCKED_RECT          combinedBufferLock;
+
+private:
+    void renderLine();
+    
+    void fetchAndDecode();
+    
+    void render_blank();
+    void render_2();
+    void render_3();
+    void render_4_5();
+    void render_6_7();
+    void render_8();
+    void render_9();
+    void render_A();
+    void render_B();
+    void render_C();
+    void render_D();
+    void render_E();
+    void render_F();
+
+};
+
+#endif
+
+/*
 class Antic : public Processor, public VideoProducer
 {
     friend class Antic_Registers;
@@ -84,4 +181,4 @@ class Antic : public Processor, public VideoProducer
 };
 
 #endif
-
+*/

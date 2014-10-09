@@ -1,4 +1,5 @@
 FOR NEXT RELEASE
+- support atari 5200 images within .zip files
 - bug where I can't add bindings to the ECS keyboard default bindings; have to clear the
   binding first because it's getting confused somehow
 

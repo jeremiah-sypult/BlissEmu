@@ -10,95 +10,77 @@ GTIA::GTIA()
     registers.init(this);
 }
 
-GTIA_Registers* GTIA::getRegisters()
+void GTIA::resetProcessor()
 {
-    return &registers;
+    memset(HPOSP, 0, sizeof(HPOSP));
+    memset(HPOSM, 0, sizeof(HPOSM));
+    memset(SIZEP, 0, sizeof(SIZEP));
+    SIZEM = 0;
+    memset(GRAFP, 0, sizeof(GRAFP));
+    GRAFM = 0;
+    memset(COLPM, 0, sizeof(COLPM));
+    memset(COLPF, 0, sizeof(COLPF));
+    COLBK = 0;
+    PRIOR = 0;
+    VDELAY = 0;
+    GRACTL = 0;
+    memset(MPF, 0, sizeof(MPF));
+    memset(PPL, 0, sizeof(PPF));
+    memset(MPF, 0, sizeof(MPL));
+    memset(PPL, 0, sizeof(PPL));
+    memset(TRIG, 0, sizeof(TRIG));
+    CONSOL = 0;
 }
 
-INT32 GTIA::getClockSpeed()
-{
-    return 1;
-}
-
-INT32 GTIA::tick(INT32 minimum)
-{
-#ifdef _TRACE_TICKS
-    fprintf(stderr, "GTIA::tick()\n");
-#endif
-
-    return minimum;
-}
-
-void GTIA::process(UINT16 location, UINT8 an0, UINT8 an1, UINT8 an2, UINT8 an3)
+/* GTIA modes are not yet supported for performanc reasons
+void GTIA::process(UINT16 location, UINT8 an0, UINT8 color0, UINT8 an1, UINT8 color1)
 {
     switch (PRIOR & 0xC0) {
         case 0x00:
         {
-            UINT8 an_palette[8] = { COLBK, 0, 0, 0, COLPF0, COLPF1, COLPF2,
-                    COLPF3 };
-            imageBank[location] = an_palette[an0];
-            imageBank[location+1] = an_palette[an1];
-            imageBank[location+2] = an_palette[an2];
-            imageBank[location+3] = an_palette[an3];
+            imageBank[location] = color0;
+            imageBank[location+1] = color1;
             break;
         }
         case 0x40:
         {
-            if (!an0) {
-                imageBank[location] = COLBK;
-                imageBank[location+1] = COLBK;
-                imageBank[location+2] = COLBK;
-                imageBank[location+3] = COLBK;
-            }
-            else {
-                UINT8 color = (COLBK | ((an0 & 0x03) << 2) |
-                        (an2 & 0x03));
-                imageBank[location] = color;
-                imageBank[location+1] = color;
-                imageBank[location+2] = color;
-                imageBank[location+3] = color;
-            }
+            UINT8 color = COLBK;
+            if ((an0 & 0x04) == 0)
+                color |=  (an0 & 0x03) << 2;
+            if ((an1 & 0x04) == 0)
+                color |= (an1 & 0x03);
+            imageBank[location] = color;
+            imageBank[location+1] = color;
             break;
         }
         case 0x80:
         {
-            if (!an0) {
+            if ((an0 & 0x04) == 0) {
                 imageBank[location] = COLBK;
                 imageBank[location+1] = COLBK;
-                imageBank[location+2] = COLBK;
-                imageBank[location+3] = COLBK;
             }
             else {
-                UINT8 an_palette[16] = { COLPM0, COLPM1, COLPM2, COLPM3,
-                        COLPF0, COLPF1, COLPF2, COLPF3,
-                        COLPF0, COLPF1, COLPF2, COLPF3,
-                        COLBK, COLBK, COLBK, COLBK };
-                UINT8 data = ((an0 & 0x03) << 2) | (an2 & 0x03);
-                UINT8 color = an_palette[data];
+                UINT8 an_palette[16] = { COLPM[0], COLPM[1], COLPM[2], COLPM[3],
+                        COLPF[0], COLPF[1], COLPF[2], COLPF[3],
+                        COLBK, COLBK, COLBK, COLBK,
+                        COLPF[0], COLPF[1], COLPF[2], COLPF[3] };
+                UINT8 color = an_palette[((an0 & 0x03) << 2) | (an1 & 0x03)];
                 imageBank[location] = color;
                 imageBank[location+1] = color;
-                imageBank[location+2] = color;
-                imageBank[location+3] = color;
             }
             break;
         }
         case 0xC0:
         {
-            if (!an0) {
-                imageBank[location] = COLBK;
-                imageBank[location+1] = COLBK;
-                imageBank[location+2] = COLBK;
-                imageBank[location+3] = COLBK;
-            }
-            else {
-                UINT8 color = (COLBK | ((an0 & 0x03) << 6) |
-                        ((an2 & 0x03) << 4));
-                imageBank[location] = color;
-                imageBank[location+1] = color;
-                imageBank[location+2] = color;
-                imageBank[location+3] = color;
-            }
+            UINT8 color = COLBK;
+            if ((an0 & 0x04) == 0)
+                color |= (an0 & 0x03) << 6;
+            if ((an1 & 0x04) == 0)
+                color |= (an1 & 0x03) << 4;
+            imageBank[location] = color;
+            imageBank[location+1] = color;
             break;
         }
     }
 }
+*/

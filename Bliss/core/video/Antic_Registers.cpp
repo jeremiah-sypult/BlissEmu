@@ -3,7 +3,7 @@
 #include "Antic.h"
 
 Antic_Registers::Antic_Registers()
-    : antic(NULL)
+    : RAM(0x10, 0xD400, 0xFE0F, 0xFE0F, 8)
 {}
 
 void Antic_Registers::init(Antic* a)
@@ -11,41 +11,10 @@ void Antic_Registers::init(Antic* a)
     antic = a;
 }
 
-UINT16 Antic_Registers::getReadSize()
-{
-    return 0x10;
-}
-
-UINT16 Antic_Registers::getReadAddress()
-{
-    return 0xD400;
-}
-
-UINT16 Antic_Registers::getReadAddressMask()
-{
-    return 0xFE0F;
-}
-
-UINT16 Antic_Registers::getWriteSize()
-{
-    return 0x10;
-}
-
-UINT16 Antic_Registers::getWriteAddress()
-{
-    return 0xD400;
-}
-
-UINT16 Antic_Registers::getWriteAddressMask()
-{
-    return 0xFE0F;
-}
-
 void Antic_Registers::poke(UINT16 addr, UINT16 value)
 {
-    switch (addr) {
+    switch (addr & 0xF) {
         case 0x00:  //DMACTL
-//cout << "poked DMACTL: " << (int)value << "\n";
             antic->DMACTL = (UINT8)value;
             break;
         case 0x01:  //CHACTL
@@ -83,23 +52,7 @@ void Antic_Registers::poke(UINT16 addr, UINT16 value)
 
 UINT16 Antic_Registers::peek(UINT16 addr)
 {
-    switch (addr) {
-        case 0x00:  //DMACTL
-            return antic->DMACTL;
-        case 0x01:  //CHACTL
-            return antic->CHACTL;
-        case 0x02:  //DLISTL
-            return (antic->DLIST & 0x00FF);
-        case 0x03:  //DLISTH
-            return (antic->DLIST & 0xFF00) >> 8;
-        case 0x04:  //HSCROL
-            return antic->HSCROL;
-        case 0x05:  //VSCROL
-            return antic->VSCROL;
-        case 0x07:  //PMBASE
-            return antic->PMBASE;
-        case 0x09:  //CHBASE
-            return antic->CHBASE;
+    switch (addr & 0xF) {
         case 0x0B:  //VCOUNT/2
             return (antic->VCOUNT) >> 1;
         case 0x0C:  //PENH (unimplemented)
@@ -107,9 +60,6 @@ UINT16 Antic_Registers::peek(UINT16 addr)
             break;
         case 0x0D:  //PENV (unimplemented)
             return 0xFF;
-            break;
-        case 0x0E:  //NMIEN
-            return antic->NMIEN;
             break;
         case 0x0F:  //NMIST
             return antic->NMIST;
