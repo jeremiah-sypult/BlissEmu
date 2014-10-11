@@ -1,5 +1,5 @@
 Microsoft Visual Studio Solution File, Format Version 8.00
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Bliss.Mfc", "Bliss\Bliss.vcproj", "{124CF7CF-B0BE-478D-AC37-D90056856807}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Bliss.Mfc", "Bliss.vcproj", "{124CF7CF-B0BE-478D-AC37-D90056856807}"
 	ProjectSection(ProjectDependencies) = postProject
 		{1D1277FA-EA81-44BC-A2AA-A69FC4CEC793} = {1D1277FA-EA81-44BC-A2AA-A69FC4CEC793}
 	EndProjectSection
@@ -9,7 +9,7 @@ Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Setup", "Setup\Setup.vdproj
 		{1D1277FA-EA81-44BC-A2AA-A69FC4CEC793} = {1D1277FA-EA81-44BC-A2AA-A69FC4CEC793}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "zlib", "Bliss\thirdparty\zlib122\projects\visualc6\zlib.vcproj", "{1D1277FA-EA81-44BC-A2AA-A69FC4CEC793}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "zlib", "..\..\thirdparty\zlib122\projects\visualc6\zlib.vcproj", "{1D1277FA-EA81-44BC-A2AA-A69FC4CEC793}"
 	ProjectSection(ProjectDependencies) = postProject
 	EndProjectSection
 EndProject
