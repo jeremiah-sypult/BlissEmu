@@ -42,6 +42,13 @@ class Peripheral
         void AddProcessor(Processor* processor);
 
         /**
+         * Removes a processor from this peripheral.
+         *
+         * @param processor the processor to remove
+         */
+        void RemoveProcessor(Processor* processor);
+
+        /**
          * Gets the number of processors in this peripheral.
          *
          * @return the number of processors

@@ -1,5 +1,9 @@
 
+// TODO: jeremiah sypult cross-platform
+#if defined( _WIN32 )
 #include <dinput.h>
+#endif
+
 #include "InputConsumerObject.h"
 
 InputConsumerObject::InputConsumerObject(INT32 i, const CHAR* n, GUID ddg, INT32 doid)
@@ -53,7 +57,7 @@ float InputConsumerObject::getInputValue()
             float v = producerBindings[i][j]->getValue(objectIDBindings[i][j]);
             nextValue = (nextValue < v ? nextValue : v);
         }
-        value = (value > nextValue ? value : nextValue);
+        value = (value != 0 && value > nextValue ? value : nextValue);
     }
     return value;
 }

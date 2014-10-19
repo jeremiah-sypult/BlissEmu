@@ -2,7 +2,12 @@
 #ifndef INPUTPRODUCER_H
 #define INPUTPRODUCER_H
 
+// TODO: jeremiah sypult cross-platform
+#if defined( _WIN32 )
 #include <dinput.h>
+#endif
+
+#include "core/types.h"
 
 class InputProducer
 {
@@ -12,9 +17,10 @@ public:
     GUID getGuid() { return guid; }
 
     virtual const CHAR* getName() = 0;
-
+// TODO: jeremiah sypult cross-platform
+#if defined( _WIN32 )
 	virtual IDirectInputDevice8* getDevice() = 0;
-	
+#endif
     virtual void poll() = 0;
 	
     virtual INT32 getInputCount() = 0;
@@ -27,7 +33,6 @@ public:
 
 private:
     GUID guid;
-
 };
 
 #endif

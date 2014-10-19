@@ -7,6 +7,7 @@
 #include <d3d9.h>
 #include <mmreg.h>
 #include <dsound.h>
+#include "BlissAudioVideo.h"
 #include "BlissOptionsDialog.h"
 #include "BlissConfiguration.h"
 #include "core/Emulator.h"
@@ -42,7 +43,7 @@ protected:
 	afx_msg void OnFullScreenMode();
     afx_msg void OnCheckMenuItems();
     afx_msg void OnCheckMenuItems(CCmdUI* pCmdUI);
-    afx_msg UINT OnNcHitTest(CPoint point);
+    afx_msg LRESULT OnNcHitTest(CPoint point);
     BOOL PreTranslateMessage(MSG* pMsg);
     afx_msg void OnEnterMenuLoop(BOOL);
     afx_msg void OnExitMenuLoop(BOOL);
@@ -57,7 +58,7 @@ private:
     BOOL LoadRomAsRip(const CHAR*);
     BOOL SaveRip(const CHAR*);
     HRESULT InitializeDirect3D();
-    HRESULT InitializeDirectSound();
+    HRESULT InitializeDirectSound(DWORD sampleRate);
     void InitializeDirectInput();
     BOOL InitializeEmulator();
     void InitializeEmulatorInputs();
@@ -86,6 +87,9 @@ private:
     WINDOWPLACEMENT wp;
     BOOL menuInFullscreen;
     BOOL cursorShowing;
+
+	AudioMixerWinDS* audioMixer;
+	VideoBusWinD3D* videoBus;
 
 	//DirectX stuff
 	D3DPRESENT_PARAMETERS presentParams;

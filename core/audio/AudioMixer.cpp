@@ -1,7 +1,4 @@
 
-#include "gui/stdafx.h"
-#include "gui/BlissApp.h"
-
 #include <stdio.h>
 #include <string.h>
 #include "AudioMixer.h"
@@ -10,15 +7,13 @@
 extern UINT64 lcm(UINT64, UINT64);
 
 AudioMixer::AudioMixer()
-    : Processor("Audio Mixer"),
-      outputBuffer(NULL),
-      audioProducerCount(0),
-      commonClocksPerTick(0),
-      sampleBuffer(NULL),
-	  sampleBufferLength(0),
-      sampleCount(0),
-      outputBufferWritePosition(0),
-      outputBufferSize(0)
+  : Processor("Audio Mixer"),
+    audioProducerCount(0),
+    commonClocksPerTick(0),
+    sampleBuffer(NULL),
+    sampleBufferSize(0),
+    sampleCount(0),
+    sampleSize(0)
 {
 	memset(&audioProducers, 0, sizeof(audioProducers));
 }
@@ -61,11 +56,12 @@ void AudioMixer::removeAll()
 void AudioMixer::resetProcessor()
 {
     //reset instance data
-    outputBufferWritePosition = 0;
     commonClocksPerTick = 0;
     sampleCount = 0;
-    if (sampleBuffer)
-        memset(sampleBuffer, 0, sampleBufferLength);
+
+	if (sampleBuffer) {
+        memset(sampleBuffer, 0, sampleBufferSize);
+	}
 
     //iterate through my audio output lines to determine the common output clock
     UINT64 totalClockSpeed = getClockSpeed();
@@ -82,45 +78,42 @@ void AudioMixer::resetProcessor()
     }
 }
 
-void AudioMixer::init(IDirectSoundBuffer8* buffer)
+void AudioMixer::init(UINT32 sampleRate)
 {
-    this->outputBuffer = buffer;
-    DSBCAPS caps;
-	ZeroMemory(&caps, sizeof(DSBCAPS));
-	caps.dwSize = sizeof(DSBCAPS);
-	buffer->GetCaps(&caps);
-    outputBufferSize = caps.dwBufferBytes;
-    WAVEFORMATEX wfx;
-    ZeroMemory(&wfx, sizeof(WAVEFORMATEX));
-    buffer->GetFormat(&wfx, sizeof(WAVEFORMATEX), NULL);
-    sampleBufferLength = wfx.nAvgBytesPerSec/10;
-    sampleBuffer = new UINT8[sampleBufferLength];
-	memset(sampleBuffer, 0, sampleBufferLength);
-    sampleCount = 0;
+	// TODO: assert if sampleRate/clockSpeed is 0
+
+	AudioMixer::release();
+
+	clockSpeed = sampleRate;
+	sampleSize = ( clockSpeed / 60.0 );
+	sampleBufferSize = sampleSize * sizeof(INT16);
+	sampleBuffer = new INT16[sampleSize];
+
+	if (sampleBuffer) {
+		memset(sampleBuffer, 0, sampleBufferSize);
+	}
 }
 
 void AudioMixer::release()
 {
-    if (outputBuffer) {
-        this->outputBuffer = NULL;
-    }
     if (sampleBuffer) {
+        sampleBufferSize = 0;
+        sampleSize = 0;
+        sampleCount = 0;
         delete[] sampleBuffer;
         sampleBuffer = NULL;
-        sampleBufferLength = 0;
-        sampleCount = 0;
     }
 }
 
 INT32 AudioMixer::getClockSpeed()
 {
-	DWORD freq;
-	outputBuffer->GetFrequency(&freq);
-	return freq;
+	return clockSpeed;
 }
 
 INT32 AudioMixer::tick(INT32 minimum)
 {
+	// TODO: assert if sampleCount >= sampleSize
+
     for (int totalTicks = 0; totalTicks < minimum; totalTicks++) {
         //mix and flush the sample buffers
         INT64 totalSample = 0;
@@ -148,13 +141,15 @@ INT32 AudioMixer::tick(INT32 minimum)
             nextLine->commonClockCounter = -missingClocks;
         }
 
-        if (audioProducerCount > 0)
+        if (audioProducerCount > 1) {
             totalSample = totalSample / audioProducerCount;
-        sampleBuffer[sampleCount++] = (UINT8)(totalSample & 0xFF);
-        sampleBuffer[sampleCount++] = (UINT8)((totalSample & 0xFF00)>>8);
-    	
-        if (sampleCount == sampleBufferLength)
+        }
+
+        sampleBuffer[sampleCount++] = clipSample(totalSample);
+
+        if (sampleCount == sampleSize) {
             flushAudio();
+        }
     }
 
     return minimum;
@@ -162,25 +157,7 @@ INT32 AudioMixer::tick(INT32 minimum)
 
 void AudioMixer::flushAudio()
 {
-    DWORD currentPos;
-    UINT32 end = (outputBufferWritePosition + sampleCount) % outputBufferSize;
-    if (end < outputBufferWritePosition) {
-        do {
-            outputBuffer->GetCurrentPosition(&currentPos, NULL);
-        } while (currentPos >= outputBufferWritePosition || currentPos < end);
-    }
-    else {
-        do {
-            outputBuffer->GetCurrentPosition(&currentPos, NULL);
-        } while (currentPos >= outputBufferWritePosition && currentPos < end);
-    }
-    DWORD bufSize1, bufSize2;
-    void* buf1; void* buf2;
-    outputBuffer->Lock(outputBufferWritePosition, sampleCount, &buf1, &bufSize1, &buf2, &bufSize2, 0);
-    memcpy(buf1, sampleBuffer, bufSize1);
-    memcpy(buf2, sampleBuffer+bufSize1, bufSize2);
-    outputBuffer->Unlock(buf1, bufSize1, buf2, bufSize2);
-    outputBufferWritePosition = end;
-
+    //the platform subclass must copy the sampleBuffer to the device
+    //before calling here (which discards the contents of sampleBuffer)
     sampleCount = 0;
 }

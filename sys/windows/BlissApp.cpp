@@ -3,7 +3,7 @@
 #include "BlissApp.h"
 #include "BlissMainFrame.h"
 #include "BlissCommandLine.h"
-#include "drivers/intv/Intellivision.h"
+#include "BlissCGC.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -59,16 +59,17 @@ BOOL BlissApp::InitInstance()
     pFrame->SetFullScreen(cmdInfo.m_bFullScreen);
     if (strlen(cmdInfo.m_strFileName))
         pFrame->LoadAndRunRip(cmdInfo.m_strFileName);
-
+#if defined( CLASSIC_GAME_CONTROLLER )
     initCGC();
-
+#endif
 	return TRUE;
 }
 
 int BlissApp::ExitInstance()
 {
+#if defined( CLASSIC_GAME_CONTROLLER )
     releaseCGC();
-
+#endif
     delete m_pMainWnd;
     m_pMainWnd = NULL;
 

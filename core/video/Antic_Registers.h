@@ -4,6 +4,8 @@
 
 #include "core/memory/RAM.h"
 
+class Antic;
+
 class Antic_Registers : public RAM
 {
 

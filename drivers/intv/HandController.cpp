@@ -1,9 +1,14 @@
 
 #include "HandController.h"
 #include "Intellivision.h"
-#include "cgc.h"
 
-const double PI = 3.14159265358979323846;
+// TODO: jeremiah sypult cross-platform
+// classic game controller support should be handled in the input implementation
+#if defined( CLASSIC_GAME_CONTROLLER )
+#include "cgc.h"
+#endif /* CLASSIC_GAME_CONTROLLER */
+
+const double PI = 3.14159265358979323846264338327950288;
 
 const float HandController::vectorParse = (float)sin(PI/4.0);
 
@@ -92,12 +97,12 @@ InputConsumerObject* HandController::getInputConsumerObject(INT32 i)
 
 void HandController::evaluateInputs()
 {
+	static const float offset = (2.0f * PI)/16.0f;
+
     inputValue = 0;
 
-    for (UINT16 i = 0; i < 15; i++) 
-    {
-        if (inputConsumerObjects[i]->getInputValue() ==
-            1.0f)
+    for (UINT16 i = 0; i < 16; i++) {
+        if (inputConsumerObjects[i]->getInputValue() == 1.0f)
             inputValue |= BUTTON_OUTPUT_VALUES[i];
     }
 
@@ -117,15 +122,14 @@ void HandController::evaluateInputs()
         inputConsumerObjects[21]->getInputValue() -
         nwseVector + neswVector;
 
-    if (xPos != 0 || yPos != 0) 
-    {
-        double positionInRadians = (atan2(-xPos, -yPos)+PI);
-        double offset = (2.0 * PI)/16.0;
-        UINT16 directionValue = DIRECTION_OUTPUT_VALUES[(UINT16)(
-            (positionInRadians+(offset/2.0))/offset) & 0x0F];
-        inputValue |= directionValue;
-    }
+	if (xPos != 0 || yPos != 0) {
+		float positionInRadians = (atan2f(-xPos, -yPos)+PI);
+		UINT16 directionIndex = (UINT16)((positionInRadians+(offset/2.0))/offset) & 0x0F;
+		UINT16 directionValue = DIRECTION_OUTPUT_VALUES[directionIndex];
+		inputValue |= directionValue;
+	}
 
+#if defined( CLASSIC_GAME_CONTROLLER )
     if (usingCGC) {
         //also support the CGC
         USHORT intyData;
@@ -143,7 +147,7 @@ void HandController::evaluateInputs()
         if (intyData & 0x0080)
             inputValue |= DIRECTION_OUTPUT_VALUES[(intyData & 0x0F00) >> 8];
     }
-
+#endif /* CLASSIC_GAME_CONTROLLER */
     inputValue = (UINT16)(0xFF ^ inputValue);
 }
 

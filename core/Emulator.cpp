@@ -33,8 +33,6 @@ Emulator::Emulator(const char* name)
 {
     memset(peripherals, 0, sizeof(peripherals));
     memset(usePeripheralIndicators, FALSE, sizeof(usePeripheralIndicators));
-
-    AddProcessor(&audioMixer);
 }
 
 void Emulator::AddPeripheral(Peripheral* p)
@@ -58,24 +56,54 @@ void Emulator::UsePeripheral(UINT32 i, BOOL b)
     usePeripheralIndicators[i] = b;
 }
 
-void Emulator::InitVideo(IDirect3DDevice9* direct3DDevice)
+UINT32 Emulator::GetVideoWidth()
 {
-    videoBus.init(direct3DDevice);
+	return videoWidth;
+}
+
+UINT32 Emulator::GetVideoHeight()
+{
+	return videoHeight;
+}
+
+void Emulator::InitVideo(VideoBus* video, UINT32 width, UINT32 height)
+{
+	if ( video != NULL ) {
+		videoBus = video;
+	}
+
+    videoBus->init(width, height);
 }
 
 void Emulator::ReleaseVideo()
 {
-    videoBus.release();
+	videoBus->release();
+	videoBus = NULL;
 }
 
-void Emulator::InitAudio(IDirectSoundBuffer8* directSoundBuffer)
+void Emulator::InitAudio(AudioMixer* audio, UINT32 sampleRate)
 {
-    audioMixer.init(directSoundBuffer);
+	if (audio != NULL) {
+		audioMixer = audio;
+	}
+
+	// TODO: check for an existing audioMixer processor and release it
+	for (UINT16 i = 0; i < GetProcessorCount(); i++) {
+		Processor* p = GetProcessor(i);
+		if (p == audio) {
+			RemoveProcessor(audio);
+		}
+	}
+
+	AddProcessor(audioMixer);
+	audioMixer->init(sampleRate);
 }
 
 void Emulator::ReleaseAudio()
 {
-    audioMixer.release();
+	audioMixer->release();
+	RemoveProcessor(audioMixer);
+	audioMixer = NULL;
 }
 
 void Emulator::Reset()
@@ -89,8 +117,8 @@ void Emulator::SetRip(Rip* rip)
     if (this->currentRip != NULL) {
         processorBus.removeAll();
         memoryBus.removeAll();
-        videoBus.removeAll();
-        audioMixer.removeAll();
+        videoBus->removeAll();
+        audioMixer->removeAll();
         inputConsumerBus.removeAll();
     }
 
@@ -136,12 +164,12 @@ void Emulator::InsertPeripheral(Peripheral* p)
     //video producers
     count = p->GetVideoProducerCount();
     for (i = 0; i < count; i++)
-        videoBus.addVideoProducer(p->GetVideoProducer(i));
+        videoBus->addVideoProducer(p->GetVideoProducer(i));
 
     //audio producers
     count = p->GetAudioProducerCount();
     for (i = 0; i < count; i++)
-        audioMixer.addAudioProducer(p->GetAudioProducer(i));
+        audioMixer->addAudioProducer(p->GetAudioProducer(i));
 
     //input consumers
     count = p->GetInputConsumerCount();
@@ -171,12 +199,12 @@ void Emulator::RemovePeripheral(Peripheral* p)
     //video producers
     count = p->GetVideoProducerCount();
     for (i = 0; i < count; i++)
-        videoBus.removeVideoProducer(p->GetVideoProducer(i));
+        videoBus->removeVideoProducer(p->GetVideoProducer(i));
 
     //audio producers
     count = p->GetAudioProducerCount();
     for (i = 0; i < count; i++)
-        audioMixer.removeAudioProducer(p->GetAudioProducer(i));
+        audioMixer->removeAudioProducer(p->GetAudioProducer(i));
 
     //input consumers
     count = p->GetInputConsumerCount();
@@ -192,12 +220,12 @@ void Emulator::Run()
 
 void Emulator::Render()
 {
-    videoBus.render();
+    videoBus->render();
 }
 
 void Emulator::FlushAudio()
 {
-    audioMixer.flushAudio();
+    audioMixer->flushAudio();
 }
 
 UINT32 Emulator::systemIDs[NUM_EMULATORS] = {

@@ -53,7 +53,7 @@ private:
     CHAR*    filename;
     UINT32   fileoffset;
 
-    void*    image;
+    UINT8*    image;
     UINT8    byteWidth;
     BOOL     enabled;
     UINT16   size;

@@ -11,6 +11,9 @@ Atari5200::Atari5200()
       cpu(&memoryBus),
       antic(&memoryBus, &gtia)
 {
+	videoWidth = 336;
+	videoHeight = 240;
+
     //make the connections between the antic and the cpu
     antic.connectPinOut(ANTIC_PIN_OUT_NMI, &cpu, _6502C_PIN_IN_NMI);
     antic.connectPinOut(ANTIC_PIN_OUT_HALT, &cpu, _6502C_PIN_IN_HALT);

@@ -14,10 +14,6 @@
 #include "core/video/AY38900.h"
 #include "core/audio/AY38914.h"
 
-extern bool usingCGC;
-void initCGC();
-void releaseCGC();
-
 class Intellivision : public Emulator
 {
 
@@ -48,8 +44,5 @@ class Intellivision : public Emulator
         Intellivoice      intellivoice;
 
 };
-
-typedef int (* CGCGETDATA)(UCHAR, USHORT *);
-extern CGCGETDATA L_CGCGetCookedIntyData;
 
 #endif

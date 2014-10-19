@@ -2,10 +2,6 @@
 #ifndef EMULATOR_H
 #define EMULATOR_H
 
-#include <d3d9.h>
-#include <mmreg.h>
-#include <dsound.h>
-
 #include "Peripheral.h"
 #include "core/types.h"
 #include "core/rip/Rip.h"
@@ -36,14 +32,17 @@ class Emulator : public Peripheral
         UINT32 GetPeripheralCount();
         Peripheral* GetPeripheral(UINT32);
 
+		UINT32 GetVideoWidth();
+		UINT32 GetVideoHeight();
+
         void UsePeripheral(UINT32, BOOL);
 
         void SetRip(Rip* rip);
 
-        void InitVideo(IDirect3DDevice9* direct3DDevice);
-        void ReleaseVideo();
-        void InitAudio(IDirectSoundBuffer8* directSoundBuffer);
-        void ReleaseAudio();
+		void InitVideo(VideoBus* video, UINT32 width, UINT32 height);
+		void ReleaseVideo();
+		void InitAudio(AudioMixer* audio, UINT32 sampleRate);
+		void ReleaseAudio();
 
         void Reset();
         void Run();
@@ -59,10 +58,13 @@ class Emulator : public Peripheral
 
         MemoryBus          memoryBus;
 
+		UINT32 videoWidth;
+		UINT32 videoHeight;
+
     private:
         ProcessorBus       processorBus;
-        AudioMixer         audioMixer;
-        VideoBus           videoBus;
+        AudioMixer         *audioMixer;
+        VideoBus           *videoBus;
         InputConsumerBus   inputConsumerBus;
 
         void InsertPeripheral(Peripheral* p);

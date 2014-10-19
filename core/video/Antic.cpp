@@ -2,34 +2,9 @@
 #include "Antic.h"
 #include "core/cpu/ProcessorBus.h"
 #include <time.h>
-
-#define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZRHW|D3DFVF_TEX1)
-struct CUSTOMVERTEX
-{
-    FLOAT  x, y, z, rhw; // The position
-    FLOAT  tu, tv;       // The texture coordinates
-};
+#include <stdlib.h> // jeremiah sypult - srand
 
 #define IMAGE_BANK_LENGTH 76800
-
-typedef enum _AnticMode
-{
-    START_HSYNC,
-    END_HSYNC,
-    START_DISPLAY,
-    START_WIDE_PLAYFIELD,
-    START_REGULAR_PLAYFIELD,
-    START_NARROW_PLAYFIELD,
-    END_WSYNC,
-    END_WSYNC_DURING_WIDE,
-    END_NARROW_PLAYFIELD,
-    END_REGULAR_PLAYFIELD,
-    END_WIDE_PLAYFIELD,
-    START_HBLANK,
-    START_VBLANK,
-    VBLANK,
-    END_CYCLE_STEALING,
-} AnticMode;
         
 const UINT8 Antic::ANBK  = 0x0;
 const UINT8 Antic::ANPF0 = 0x4;
@@ -134,69 +109,15 @@ void Antic::resetProcessor()
     srand((unsigned int)time(NULL));
 }
 
-void Antic::setVideoOutputDevice(IDirect3DDevice9* vod)
+void Antic::setPixelBuffer(UINT32* pixelBuffer, UINT32 rowSize)
 {
-	if (this->videoOutputDevice != NULL) {
-		if (vertexBuffer != NULL) {
-			vertexBuffer->Release();
-			vertexBuffer = NULL;
-		}
-		if (combinedTexture != NULL) {
-			combinedTexture->Release();
-			combinedTexture = NULL;
-		}
-	}
-
-    this->videoOutputDevice = vod;
-
-	if (this->videoOutputDevice != NULL) {
-		//obtain the surface we desire
-		videoOutputDevice->CreateTexture(320, 240, 1, D3DUSAGE_DYNAMIC, D3DFMT_X8R8G8B8,
-                D3DPOOL_DEFAULT, &combinedTexture, NULL);
-	    
-	    combinedTexture->LockRect(0, &combinedBufferLock, NULL, D3DLOCK_DISCARD |  D3DLOCK_NOSYSLOCK);
-        for (INT32 i = 0; i < IMAGE_BANK_LENGTH; i++)
-            ((UINT32*)combinedBufferLock.pBits)[i] = palette[imageBank[i]];
-	    combinedTexture->UnlockRect(0);
-
-        //create our vertex buffer
-		IDirect3DSurface9* bb;
-		videoOutputDevice->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &bb);
-		D3DSURFACE_DESC desc;
-		bb->GetDesc(&desc);
-		videoOutputDevice->CreateVertexBuffer(4*sizeof(CUSTOMVERTEX), 0, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &vertexBuffer, NULL);
-		CUSTOMVERTEX vertices[] =
-		{
-			{   0.0f,                0.0f,              1.0f, 1.0f, -0.001f, -0.001f, }, // x, y, z, rhw, tu, tv
-			{   (FLOAT)desc.Width,   0.0f,              1.0f, 1.0f,  1.001f, -0.001f, },
-	        {   0.0f,               (FLOAT)desc.Height, 1.0f, 1.0f, -0.001f,  1.001f, },
-			{   (FLOAT)desc.Width,  (FLOAT)desc.Height, 1.0f, 1.0f,  1.001f,  1.001f, },
-		};
-		bb->Release();
-		void* pVertices;
-		vertexBuffer->Lock(0, sizeof(vertices), (void**)&pVertices, 0);
-		memcpy(pVertices, vertices, sizeof(vertices));
-		vertexBuffer->Unlock();
-	}
+	Antic::pixelBuffer = pixelBuffer;
+	Antic::pixelBufferRowSize = rowSize;
 }
 
 void Antic::render()
 {
-	combinedTexture->LockRect(0, &combinedBufferLock, NULL, D3DLOCK_DISCARD |  D3DLOCK_NOSYSLOCK);
-    for (INT32 i = 0; i < IMAGE_BANK_LENGTH; i++)
-        ((UINT32*)combinedBufferLock.pBits)[i] = palette[imageBank[i]];
-	combinedTexture->UnlockRect(0);
-
-	videoOutputDevice->SetTexture(0, combinedTexture);
-	videoOutputDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
-	videoOutputDevice->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-    videoOutputDevice->SetTextureStageState(0, D3DTSS_ALPHAOP,   D3DTOP_DISABLE);
-	videoOutputDevice->SetFVF(D3DFVF_CUSTOMVERTEX);
-    videoOutputDevice->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
-    videoOutputDevice->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-    videoOutputDevice->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-	videoOutputDevice->SetStreamSource(0, vertexBuffer, 0, sizeof(CUSTOMVERTEX));
-	videoOutputDevice->DrawPrimitive(D3DPT_TRIANGLESTRIP, 0, 2);
+	// the video bus handles rendering.
 }
 
 INT32 Antic::tick(INT32 minimum)
@@ -400,16 +321,16 @@ INT32 Antic::tick(INT32 minimum)
             usedCycles += 228;
             break;
 
-        /*
         //this is a generic mode use to end a session of cycle stealing from the CPU
         case END_CYCLE_STEALING:  //hclock == ???
+#if 0
             pinOut[ANTIC_PIN_OUT_HALT]->isHigh = TRUE;
             HCOUNT = (UINT8)(HCOUNT+cyclesToSteal);
             cyclesToSteal = 0;
             //anticMode = afterCycleStealingMode;
             usedCycles += cyclesToSteal;
+#endif
             break;
-        */
     }
     
     } while (usedCycles < minimum);

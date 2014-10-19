@@ -8,6 +8,18 @@ void Peripheral::AddProcessor(Processor* p)
     processorCount++;
 }
 
+void Peripheral::RemoveProcessor(Processor* p)
+{
+    for (UINT32 i = 0; i < processorCount; i++) {
+        if (processors[i] == p) {
+            for (UINT32 j = i; j < (processorCount-1); j++)
+                processors[j] = processors[j+1];
+            processorCount--;
+            return;
+        }
+    }
+}
+
 UINT16 Peripheral::GetProcessorCount()
 {
     return processorCount;

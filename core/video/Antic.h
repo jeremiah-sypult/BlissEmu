@@ -2,8 +2,6 @@
 #ifndef ANTIC_H
 #define ANTIC_H
 
-#include <d3d9.h>
-
 #include "Antic_Registers.h"
 #include "VideoProducer.h"
 #include "GTIA.h"
@@ -15,7 +13,24 @@
 #define ANTIC_PIN_OUT_HALT  1
 #define ANTIC_PIN_OUT_READY 2
 
-typedef enum _AnticMode AnticMode;
+typedef enum _AnticMode
+{
+    START_HSYNC,
+    END_HSYNC,
+    START_DISPLAY,
+    START_WIDE_PLAYFIELD,
+    START_REGULAR_PLAYFIELD,
+    START_NARROW_PLAYFIELD,
+    END_WSYNC,
+    END_WSYNC_DURING_WIDE,
+    END_NARROW_PLAYFIELD,
+    END_REGULAR_PLAYFIELD,
+    END_WIDE_PLAYFIELD,
+    START_HBLANK,
+    START_VBLANK,
+    VBLANK,
+    END_CYCLE_STEALING,
+} AnticMode;
 
 class Antic : public Processor, public VideoProducer
 {
@@ -27,8 +42,7 @@ public:
     Antic(MemoryBus* mb, GTIA* gt);
         
     void resetProcessor();
-
-    void setVideoOutputDevice(IDirect3DDevice9*);
+	void setPixelBuffer(UINT32* pixelBuffer, UINT32 rowSize);
 
     void render();
 
@@ -83,10 +97,8 @@ private:
     UINT16 cyclesToSteal;
     //private AnticMode afterCycleStealingMode;
 
-    IDirect3DDevice9*       videoOutputDevice;
-    IDirect3DTexture9*      combinedTexture;
-    IDirect3DVertexBuffer9* vertexBuffer;
-    D3DLOCKED_RECT          combinedBufferLock;
+	UINT32*					pixelBuffer;
+	UINT32					pixelBufferRowSize;
 
 private:
     void renderLine();

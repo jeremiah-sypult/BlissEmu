@@ -1,6 +1,10 @@
 
 #include "JoyPad.h"
+
+// TODO: jeremiah sypult cross-platform
+#if defined( _WIN32 )
 #include "dinput.h"
+#endif
 
 const UINT8 JoyPad::KBCODES[15] = {
         0x0C, //Start   1100
@@ -18,7 +22,7 @@ const UINT8 JoyPad::KBCODES[15] = {
         0x03, //*       0011
         0x02, //0       0010
         0x01, //#       0001
-    };
+};
 
 JoyPad::JoyPad(INT32 id, const CHAR* name)
 : InputConsumer(id)

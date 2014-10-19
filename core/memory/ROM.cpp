@@ -32,8 +32,8 @@ void ROM::Initialize(const CHAR* n, const CHAR* f, UINT32 o, UINT8 byteWidth, UI
     this->location = location;
     this->readAddressMask = readMask;
     this->image = new UINT8[size*byteWidth];
-    peekFunc = (byteWidth == 1 ? ROM::peek1 : (byteWidth == 2 ? ROM::peek2 : 
-            (byteWidth == 4 ? ROM::peek4 : ROM::peekN)));
+    peekFunc = (byteWidth == 1 ? &ROM::peek1 : (byteWidth == 2 ? &ROM::peek2 :
+            (byteWidth == 4 ? &ROM::peek4 : &ROM::peekN)));
 }
 
 ROM::~ROM()
@@ -90,10 +90,10 @@ void ROM::SetEnabled(BOOL b)
 {
     enabled = b;
     if (enabled)
-        peekFunc = (byteWidth == 1 ? ROM::peek1 : (byteWidth == 2 ? ROM::peek2 : 
-                (byteWidth == 4 ? ROM::peek4 : ROM::peekN)));
+        peekFunc = (byteWidth == 1 ? &ROM::peek1 : (byteWidth == 2 ? &ROM::peek2 :
+                (byteWidth == 4 ? &ROM::peek4 : &ROM::peekN)));
     else
-        peekFunc = ROM::peekN;
+        peekFunc = &ROM::peekN;
 }
 
 const CHAR* ROM::getName()

@@ -2,11 +2,6 @@
 #ifndef AUDIOMIXER_H
 #define AUDIOMIXER_H
 
-#include <Windows.h>
-#include <d3d9.h>
-#include <mmreg.h>
-#include <dsound.h>
-
 #include "AudioProducer.h"
 #include "core/types.h"
 #include "core/cpu/Processor.h"
@@ -25,33 +20,35 @@ class AudioMixer : public Processor
         AudioMixer();
         virtual ~AudioMixer();
 
-        void resetProcessor();
+        inline INT16 clipSample(INT64 sample) {
+            return sample > 32767 ? 32767 : sample < -32768 ? -32768 : sample;
+        }
+
+        virtual void resetProcessor();
         INT32 getClockSpeed();
         INT32 tick(INT32 minimum);
-        void flushAudio();
+        virtual void flushAudio();
 
         //only to be called by the Emulator
-        void init(IDirectSoundBuffer8* aod);
-        void release();
+        virtual void init(UINT32 sampleRate);
+        virtual void release();
 
         void addAudioProducer(AudioProducer*);
         void removeAudioProducer(AudioProducer*);
         void removeAll();
 
-    private:
+    protected:
         //output info
-        IDirectSoundBuffer8* outputBuffer;
-        UINT32 outputBufferWritePosition;
-        UINT32 outputBufferSize;
+        INT32 clockSpeed;
 
         AudioProducer*     audioProducers[MAX_AUDIO_PRODUCERS];
         UINT32             audioProducerCount;
 
         INT64 commonClocksPerTick;
-        UINT8* sampleBuffer;
-		UINT32 sampleBufferLength;
+        INT16* sampleBuffer;
+        UINT32 sampleBufferSize;
         UINT32 sampleCount;
-
+        UINT32 sampleSize;
 };
 
 #endif

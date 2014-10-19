@@ -98,7 +98,7 @@ Rip* Rip::LoadA52(const CHAR* filename)
 
     //obtain the file size
     fseek(file, 0, SEEK_END);
-    UINT32 size = ftell(file);
+    size_t size = ftell(file);
     rewind(file);
 
     //add an appropriate ROM to the rip
@@ -150,7 +150,7 @@ Rip* Rip::LoadBin(const CHAR* filename, const CHAR* configFile)
 
     //obtain the file size
     fseek(file, 0, SEEK_END);
-    UINT32 size = ftell(file);
+    size_t size = ftell(file);
     rewind(file);
 
     //load in the file image
@@ -318,9 +318,9 @@ Rip* Rip::LoadCartridgeConfiguration(const CHAR* configFile, UINT32 crc)
                 continue;
 
             PeripheralCompatibility pc;
-            if (strcmpi(nextToken+1, "optional") != NULL)
+            if (strcmpi(nextToken+1, "optional") != 0)
                 pc = PERIPH_OPTIONAL;
-            else if (strcmpi(nextToken+1, "required") != NULL)
+            else if (strcmpi(nextToken+1, "required") != 0)
                 pc = PERIPH_REQUIRED;
             else
                 continue;
@@ -686,20 +686,20 @@ Rip* Rip::LoadZip(const CHAR* filename, const CHAR* configFile)
         if (len < 5)
             continue;
 
-        if (strcmpi(name+len-4, ".bin") == NULL && strcmpi(name+len-4, ".int") == NULL)
+        if (strcmpi(name+len-4, ".bin") == 0 && strcmpi(name+len-4, ".int") == 0)
             continue;
 
         if (unzOpenCurrentFile(file) != UNZ_OK)
             continue;
 
         UINT8* image = new UINT8[info.uncompressed_size];
-        if ((UINT32)unzReadCurrentFile(file, image, info.uncompressed_size) != info.uncompressed_size) {
+        if ((UINT32)unzReadCurrentFile(file, image, (unsigned)info.uncompressed_size) != info.uncompressed_size) {
             delete[] image;
             continue;
         }
         unzCloseCurrentFile(file);
 
-        UINT32 crc = CRC32::getCrc(image, info.uncompressed_size);
+        UINT32 crc = CRC32::getCrc(image, (UINT32)info.uncompressed_size);
         Rip* rip = LoadCartridgeConfiguration(configFile, crc);
         if (rip == NULL) {
             delete[] image;

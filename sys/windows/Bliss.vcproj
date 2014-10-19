@@ -21,7 +21,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/DDIRECTINPUT_VERSION=0x0800 /DD3D_DEBUG_INFO /DCRTDBG_MAP_ALLOC /DNOUNCRYPT"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\thirdparty\zlib122;..\..\thirdparty\xerces-c\include;..\..\thirdparty\cgc;."
+				AdditionalIncludeDirectories=".;..\..;..\..\thirdparty\zlib122;..\..\thirdparty\xerces-c\include;..\..\thirdparty\cgc"
 				PreprocessorDefinitions="WIN32;_WINDOWS;_DEBUG"
 				MinimalRebuild="TRUE"
 				ExceptionHandling="TRUE"
@@ -30,7 +30,7 @@
 				TreatWChar_tAsBuiltInType="TRUE"
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
-				WarnAsError="TRUE"
+				WarnAsError="FALSE"
 				Detect64BitPortabilityProblems="TRUE"
 				DebugInformationFormat="3"/>
 			<Tool
@@ -79,7 +79,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/DDIRECTINPUT_VERSION=0x0800 /DNOUNCRYPT"
-				AdditionalIncludeDirectories="..\..\thirdparty\zlib122;..\utils\include;..\..\thirdparty\xerces-c\include;..\..\thirdparty\cgc;."
+				AdditionalIncludeDirectories=".;..\..;..\..\thirdparty\zlib122;..\utils\include;..\..\thirdparty\xerces-c\include;..\..\thirdparty\cgc"
 				PreprocessorDefinitions="WIN32;_WINDOWS;NDEBUG"
 				MinimalRebuild="FALSE"
 				RuntimeLibrary="0"
@@ -144,6 +144,18 @@
 			</File>
 			<File
 				RelativePath=".\BlissApp.h">
+			</File>
+			<File
+				RelativePath=".\BlissAudioVideo.cpp">
+			</File>
+			<File
+				RelativePath=".\BlissAudioVideo.h">
+			</File>
+			<File
+				RelativePath=".\BlissCGC.cpp">
+			</File>
+			<File
+				RelativePath=".\BlissCGC.h">
 			</File>
 			<File
 				RelativePath=".\BlissCommandLine.cpp">

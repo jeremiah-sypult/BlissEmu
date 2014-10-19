@@ -4,11 +4,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Bliss.Mfc", "Bliss.vcproj",
 		{1D1277FA-EA81-44BC-A2AA-A69FC4CEC793} = {1D1277FA-EA81-44BC-A2AA-A69FC4CEC793}
 	EndProjectSection
 EndProject
-Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Setup", "Setup\Setup.vdproj", "{4FE7DF4B-DD24-4F20-A874-880A82D3F620}"
-	ProjectSection(ProjectDependencies) = postProject
-		{1D1277FA-EA81-44BC-A2AA-A69FC4CEC793} = {1D1277FA-EA81-44BC-A2AA-A69FC4CEC793}
-	EndProjectSection
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "zlib", "..\..\thirdparty\zlib122\projects\visualc6\zlib.vcproj", "{1D1277FA-EA81-44BC-A2AA-A69FC4CEC793}"
 	ProjectSection(ProjectDependencies) = postProject
 	EndProjectSection

@@ -34,7 +34,7 @@ const CHAR* enumNames[] = {
 };
 
 //BOOL CALLBACK EnumObjects(LPCDIDEVICEOBJECTINSTANCE lpddoi, LPVOID pvRef);
-
+#if defined( _WIN32 )
 JoystickInputProducer::JoystickInputProducer(GUID g, IDirectInputDevice8* jd)
 : InputProducer(g),
   joystickDevice(jd)
@@ -80,7 +80,7 @@ IDirectInputDevice8* JoystickInputProducer::getDevice()
 {
     return joystickDevice;
 }
-
+#endif
 INT32 JoystickInputProducer::getInputCount()
 {
     return JOYSTICK_OBJECT_COUNT;
@@ -109,6 +109,7 @@ INT32 JoystickInputProducer::evaluateForAnyInput()
 
 float JoystickInputProducer::getValue(INT32 enumeration)
 {
+#if defined( _WIN32 )
     switch ((JoystickAxis)enumeration) 
     {
         case NegX:
@@ -225,12 +226,15 @@ float JoystickInputProducer::getValue(INT32 enumeration)
         case B15:
             return (state.rgbButtons[((JoystickAxis)enumeration) - B0] != 0 ? 1.0f : 0.0f);
     }
+#endif
     return 0.0f;
 }
 
 void JoystickInputProducer::poll()
 {
+#if defined( _WIN32 )
     joystickDevice->GetDeviceState(sizeof(state), &state);
+#endif
 }
 
 /*

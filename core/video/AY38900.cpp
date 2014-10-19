@@ -3,10 +3,6 @@
 #include "AY38900.h"
 #include "core/cpu/ProcessorBus.h"
 
-#ifdef WIN32
-#define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZRHW|D3DFVF_TEX1)
-#endif
-
 #define MIN(v1, v2) (v1 < v2 ? v1 : v2)
 #define MAX(v1, v2) (v1 > v2 ? v1 : v2)
 
@@ -38,12 +34,6 @@
 #define MODE_FETCH_ROW_11 25
 #define MODE_RENDER_ROW_11 26
 #define MODE_FETCH_ROW_12 27
-
-struct CUSTOMVERTEX
-{
-    FLOAT  x, y, z, rhw; // The position
-    FLOAT  tu, tv;       // The texture coordinates
-};
 
 const INT32 AY38900::TICK_LENGTH_SCANLINE             = 228;
 const INT32 AY38900::TICK_LENGTH_FRAME                = 59736;
@@ -78,10 +68,7 @@ AY38900::AY38900(MemoryBus* mb, ROM* go, GRAM* ga)
       memoryBus(mb),
       grom(go),
       gram(ga),
-	  backtab(),
-	  vertexBuffer(NULL),
-	  combinedTexture(NULL),
-	  videoOutputDevice(NULL)
+	  backtab()
 {
     registers.init(this);
 
@@ -162,7 +149,7 @@ INT32 AY38900::tick(INT32 minimum) {
                 if (previousDisplayEnabled) {
                     //render a blank screen
                     for (int x = 0; x < 160*192; x++)
-                        ((UINT32*)combinedBufferLock.pBits)[x] = palette[borderColor];
+						((UINT32*)pixelBuffer)[x] = palette[borderColor];
                 }
                 previousDisplayEnabled = FALSE;
                 mode = MODE_VBLANK;
@@ -438,190 +425,12 @@ INT32 AY38900::tick(INT32 minimum) {
     } while (totalTicks < minimum);
 
     return totalTicks;
-
-    /*
-    int totalTicks = 0;
-    do {
-        //move to the next mode
-        mode++;
-
-        switch (mode) {
-            case 0:
-                //come out of bus isolation mode
-                setGraphicsBusVisible(TRUE);
-                if (previousDisplayEnabled)
-                    renderFrame();
-                displayEnabled = FALSE;
-            
-                //start of vblank, so stop and go back to the main loop
-                processorBus->stop();
-
-                //release SR2, allowing the CPU to run
-                pinOut[AY38900_PIN_OUT_SR2]->isHigh = TRUE;
-
-                //kick the irq line
-                pinOut[AY38900_PIN_OUT_SR1]->isHigh = FALSE;
-
-                totalTicks += TICK_LENGTH_VBLANK;
-                break;
-            case 1:
-                pinOut[AY38900_PIN_OUT_SR1]->isHigh = TRUE;
-
-                //if the display is not enabled, skip the rest of the modes
-                if (!displayEnabled) {
-                    previousDisplayEnabled = FALSE;
-                    if (previousDisplayEnabled) {
-                        //render a blank screen
-                        for (int x = 0; x < 160; x++)
-                            for (int y = 0; x < 192; x++)
-                                ((UINT32**)combinedBufferLock.pBits)[x][y] = palette[borderColor];
-                    }
-                    mode = -1;
-                    totalTicks += (TICK_LENGTH_FRAME - TICK_LENGTH_VBLANK);
-                }
-                else {
-                    previousDisplayEnabled = TRUE;
-                    pinOut[AY38900_PIN_OUT_SR2]->isHigh = FALSE;
-                    totalTicks += TICK_LENGTH_START_ACTIVE_DISPLAY;
-                }
-                break;
-
-            case 2:
-                //switch to bus isolation mode, but only if the CPU has
-                //acknowledged ~SR2 by asserting ~SST
-                if (!pinIn[AY38900_PIN_IN_SST]->isHigh) {
-                    pinIn[AY38900_PIN_IN_SST]->isHigh = TRUE;
-                    setGraphicsBusVisible(FALSE);
-                }
-
-                //release SR2
-                pinOut[AY38900_PIN_OUT_SR2]->isHigh = TRUE;
-
-                totalTicks += TICK_LENGTH_IDLE_ACTIVE_DISPLAY +
-                    (2*verticalOffset*TICK_LENGTH_SCANLINE);
-                break;
-
-            case 3:
-            case 5:
-            case 7:
-            case 9:
-            case 11:
-            case 13:
-            case 15:
-            case 17:
-            case 19:
-            case 21:
-            case 23:
-            case 25:
-                pinOut[AY38900_PIN_OUT_SR2]->isHigh = FALSE;
-                //renderRow((mode-3)/2);
-                totalTicks += TICK_LENGTH_FETCH_ROW;
-                break;
-
-            case 4:
-            case 6:
-            case 8:
-            case 10:
-            case 12:
-            case 14:
-            case 16:
-            case 18:
-            case 20:
-            case 22:
-            case 24:
-                pinOut[AY38900_PIN_OUT_SR2]->isHigh = TRUE;
-                pinIn[AY38900_PIN_IN_SST]->isHigh = TRUE;
-                totalTicks += TICK_LENGTH_RENDER_ROW;
-                break;
-
-            case 26:
-                pinOut[AY38900_PIN_OUT_SR2]->isHigh = TRUE;
-
-                //this mode could be cut off in tick length if the vertical
-                //offset is greater than 1
-            switch (verticalOffset) {
-                case 0:
-                    totalTicks += TICK_LENGTH_RENDER_ROW;
-                    break;
-                case 1:
-                    mode = -1;
-                    totalTicks += TICK_LENGTH_RENDER_ROW - TICK_LENGTH_SCANLINE;
-                    break;
-                default:
-                    mode = -1;
-                    totalTicks += (TICK_LENGTH_RENDER_ROW - TICK_LENGTH_SCANLINE -
-                        (2*(verticalOffset-1)*TICK_LENGTH_SCANLINE));
-                    break;
-            }
-                break;
-
-            case 27:
-            default:
-                mode = -1;
-                pinOut[AY38900_PIN_OUT_SR2]->isHigh = FALSE;
-                totalTicks += TICK_LENGTH_SCANLINE;
-                break;
-        }
-
-    } while (totalTicks < minimum);
-
-    return totalTicks;
-    */
 }
 
-void AY38900::setVideoOutputDevice(IDirect3DDevice9* vod)
+void AY38900::setPixelBuffer(UINT32* pixelBuffer, UINT32 rowSize)
 {
-	if (this->videoOutputDevice != NULL) {
-		if (vertexBuffer != NULL) {
-			vertexBuffer->Release();
-			vertexBuffer = NULL;
-		}
-		if (combinedTexture != NULL) {
-			combinedTexture->Release();
-			combinedTexture = NULL;
-		}
-	}
-
-    this->videoOutputDevice = vod;
-
-	if (this->videoOutputDevice != NULL) {
-		//obtain the surface we desire
-		videoOutputDevice->CreateTexture(160, 192, 1, D3DUSAGE_DYNAMIC, D3DFMT_X8R8G8B8,
-                D3DPOOL_DEFAULT, &combinedTexture, NULL);
-	    
-	    combinedTexture->LockRect(0, &combinedBufferLock, NULL, D3DLOCK_DISCARD |  D3DLOCK_NOSYSLOCK);
-        renderBorders();
-        copyBackgroundBufferToStagingArea();
-        copyMOBsToStagingArea();
-        for (int i = 0; i < 8; i++)
-            registers.memory[0x18+i] |= mobs[i].collisionRegister;
-	    combinedTexture->UnlockRect(0);
-
-        //create our vertex buffer
-		IDirect3DSurface9* bb;
-		videoOutputDevice->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &bb);
-		D3DSURFACE_DESC desc;
-		bb->GetDesc(&desc);
-		videoOutputDevice->CreateVertexBuffer(6*sizeof(CUSTOMVERTEX), 0, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &vertexBuffer, NULL);
-		CUSTOMVERTEX vertices[] =
-		{
-            /*
-			{   0.01f,                       0.01f,                      1.0f, 1.0f, 0.0f, 0.0f, }, // x, y, z, rhw, tu, tv
-			{   ((FLOAT)desc.Width)-0.01f,   0.01f,                      1.0f, 1.0f, 1.0f, 0.0f, },
-	        {   0.01f,                       ((FLOAT)desc.Height)-0.01f, 1.0f, 1.0f, 0.0f, 1.0f, },
-			{   ((FLOAT)desc.Width)-0.01f,   ((FLOAT)desc.Height)-0.01f, 1.0f, 1.0f, 1.0f, 1.0f, },
-            */
-			{   0.0f,                0.0f,              1.0f, 1.0f, -0.001f, -0.001f, }, // x, y, z, rhw, tu, tv
-			{   (FLOAT)desc.Width,   0.0f,              1.0f, 1.0f,  1.001f, -0.001f, },
-	        {   0.0f,               (FLOAT)desc.Height, 1.0f, 1.0f, -0.001f,  1.001f, },
-			{   (FLOAT)desc.Width,  (FLOAT)desc.Height, 1.0f, 1.0f,  1.001f,  1.001f, },
-		};
-		bb->Release();
-		void* pVertices;
-		vertexBuffer->Lock(0, sizeof(vertices), (void**)&pVertices, 0);
-		memcpy(pVertices, vertices, sizeof(vertices));
-		vertexBuffer->Unlock();
-	}
+	AY38900::pixelBuffer = pixelBuffer;
+	AY38900::pixelBufferRowSize = rowSize;
 }
 
 void AY38900::renderFrame()
@@ -633,28 +442,16 @@ void AY38900::renderFrame()
         mobs[i].collisionRegister = 0;
     determineMOBCollisions();
     markClean();
-
-	combinedTexture->LockRect(0, &combinedBufferLock, NULL, D3DLOCK_DISCARD |  D3DLOCK_NOSYSLOCK);
     renderBorders();
     copyBackgroundBufferToStagingArea();
     copyMOBsToStagingArea();
     for (int i = 0; i < 8; i++)
         registers.memory[0x18+i] |= mobs[i].collisionRegister;
-	combinedTexture->UnlockRect(0);
 }
 
 void AY38900::render()
 {
-	videoOutputDevice->SetTexture(0, combinedTexture);
-	videoOutputDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
-	videoOutputDevice->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-    videoOutputDevice->SetTextureStageState(0, D3DTSS_ALPHAOP,   D3DTOP_DISABLE);
-	videoOutputDevice->SetFVF(D3DFVF_CUSTOMVERTEX);
-    videoOutputDevice->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
-    videoOutputDevice->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-    videoOutputDevice->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-	videoOutputDevice->SetStreamSource(0, vertexBuffer, 0, sizeof(CUSTOMVERTEX));
-	videoOutputDevice->DrawPrimitive(D3DPT_TRIANGLESTRIP, 0, 2);
+	// the video bus handles the actual rendering.
 }
 
 void AY38900::markClean() {
@@ -681,8 +478,8 @@ void AY38900::renderBorders()
     if (blockTop) {
         //move the image up 4 pixels and block the top and bottom 4 rows with the border
         for (UINT8 y = 0; y < 8; y++) {
-            UINT32* buffer0 = ((UINT32*)combinedBufferLock.pBits) + (y*combinedBufferLock.Pitch/4);
-            UINT32* buffer1 = buffer0 + (184*combinedBufferLock.Pitch/4);
+            UINT32* buffer0 = ((UINT32*)pixelBuffer) + (y*pixelBufferRowSize/4);
+            UINT32* buffer1 = buffer0 + (184*pixelBufferRowSize/4);
             for (UINT8 x = 0; x < 160; x++) {
                 *buffer0++ = palette[borderColor];
                 *buffer1++ = palette[borderColor];
@@ -693,7 +490,7 @@ void AY38900::renderBorders()
         //block the top rows of pixels depending on the amount of vertical offset
         UINT8 numRows = (UINT8)(verticalOffset<<1);
         for (UINT8 y = 0; y < numRows; y++) {
-            UINT32* buffer0 = ((UINT32*)combinedBufferLock.pBits) + (y*combinedBufferLock.Pitch/4);
+            UINT32* buffer0 = ((UINT32*)pixelBuffer) + (y*pixelBufferRowSize/4);
             for (UINT8 x = 0; x < 160; x++)
                 *buffer0++ = palette[borderColor];
         }
@@ -703,7 +500,7 @@ void AY38900::renderBorders()
     if (blockLeft) {
         //move the image to the left 4 pixels and block the left and right 4 columns with the border
         for (UINT8 y = 0; y < 192; y++) {
-            UINT32* buffer0 = ((UINT32*)combinedBufferLock.pBits) + (y*combinedBufferLock.Pitch/4);
+            UINT32* buffer0 = ((UINT32*)pixelBuffer) + (y*pixelBufferRowSize/4);
             UINT32* buffer1 = buffer0 + 156;
             for (UINT8 x = 0; x < 4; x++) {
                 *buffer0++ = palette[borderColor];
@@ -714,7 +511,7 @@ void AY38900::renderBorders()
     else if (horizontalOffset != 0) {
         //block the left columns of pixels depending on the amount of horizontal offset
         for (UINT8 y = 0; y < 192; y++) { 
-            UINT32* buffer0 = ((UINT32*)combinedBufferLock.pBits) + (y*combinedBufferLock.Pitch/4);
+            UINT32* buffer0 = ((UINT32*)pixelBuffer) + (y*pixelBufferRowSize/4);
             for (UINT8 x = 0; x < horizontalOffset; x++) {
                 *buffer0++ = palette[borderColor];
             }
@@ -886,13 +683,14 @@ void AY38900::copyBackgroundBufferToStagingArea()
     int sourceHeightY = blockTop ? 88 : (96 - verticalOffset);
 
     int nextSourcePixel = (blockLeft ? (8 - horizontalOffset) : 0) +
-        ((blockTop ? (8 - verticalOffset) : 0) * 160);
+	((blockTop ? (8 - verticalOffset) : 0) * 160);
+
     for (int y = 0; y < sourceHeightY; y++) {
-		UINT32* nextPixelStore0 = (UINT32*)combinedBufferLock.pBits;
-		nextPixelStore0 += (y*combinedBufferLock.Pitch)>>1;
-		if (blockTop) nextPixelStore0 += combinedBufferLock.Pitch<<1;
+		UINT32* nextPixelStore0 = (UINT32*)pixelBuffer;
+		nextPixelStore0 += (y*pixelBufferRowSize)>>1;
+		if (blockTop) nextPixelStore0 += pixelBufferRowSize<<1;
 		if (blockLeft) nextPixelStore0 += 4;
-		UINT32* nextPixelStore1 = nextPixelStore0 + combinedBufferLock.Pitch/4;
+		UINT32* nextPixelStore1 = nextPixelStore0 + pixelBufferRowSize/4;
         for (int x = 0; x < sourceWidthX; x++) {
 			UINT32 nextColor = palette[backgroundBuffer[nextSourcePixel+x]];
 			*nextPixelStore0++ = nextColor;
@@ -940,11 +738,10 @@ void AY38900::copyMOBsToStagingArea()
                     if (mobs[i].behindForeground)
                         continue;
                 }
-
                 if (mobs[i].isVisible) {
-					UINT32* nextPixel = (UINT32*)combinedBufferLock.pBits;
+					UINT32* nextPixel = (UINT32*)pixelBuffer;
 					nextPixel += leftX - (blockLeft ? 4 : 0) + x;
-					nextPixel += (nextY - (blockTop ? 8 : 0)) * (combinedBufferLock.Pitch/4);
+					nextPixel += (nextY - (blockTop ? 8 : 0)) * (pixelBufferRowSize/4);
 					*nextPixel = palette[fgcolor | (currentPixel & FOREGROUND_BIT)];
                 }
             }

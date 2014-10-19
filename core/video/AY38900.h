@@ -43,7 +43,7 @@ public:
     /**
      * Implemented from the VideoProducer interface.
      */
-    void setVideoOutputDevice(IDirect3DDevice9* vod);
+	void setPixelBuffer(UINT32* pixelBuffer, UINT32 rowSize);
 
     /**
      * Implemented from the VideoProducer interface.
@@ -94,10 +94,9 @@ private:
     UINT16                  mobBuffers[8][128];
     MOB                     mobs[8];
     UINT8                   backgroundBuffer[160*96];
-    IDirect3DDevice9*       videoOutputDevice;
-    IDirect3DTexture9*      combinedTexture;
-    IDirect3DVertexBuffer9* vertexBuffer;
-    D3DLOCKED_RECT          combinedBufferLock;
+
+	UINT32*					pixelBuffer;
+	UINT32					pixelBufferRowSize;
 
     //memory listeners, for optimizations
     ROM*              grom;

@@ -1,5 +1,4 @@
 
-#include <crtdbg.h>
 #include "ProcessorBus.h"
 
 ProcessorBus::ProcessorBus()
@@ -86,6 +85,10 @@ void ProcessorBus::run()
 {
     running = true;
     while (running) {
+		// TODO: jeremiah sypult, saw crash when NULL
+		if (startQueue->next == NULL) {
+			break;
+		}
         //tick the processor that is at the head of the queue
         int minTicks = (int)((startQueue->next->tick / startQueue->tickFactor) + 1);
         startQueue->tick = ((UINT64)startQueue->processor->tick(minTicks)) * startQueue->tickFactor;

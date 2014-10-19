@@ -1,7 +1,4 @@
 
-#include "gui/stdafx.h"
-#include "gui/BlissApp.h"
-
 #include "AudioOutputLine.h"
 #include "AudioMixer.h"
 

@@ -7,7 +7,7 @@
 
 #pragma warning(disable:4786)    // Suppress STL debug info > 255 chars messages
 
-CHAR* REGISTER_NAMES[8] = { "R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7" };
+const CHAR* REGISTER_NAMES[8] = { "R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7" };
 CHAR STATUS_BITS[8] = { "SZOCIDN" };
 
 CP1610::CP1610(MemoryBus* m, UINT16 resetAddress,

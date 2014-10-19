@@ -4,6 +4,8 @@
 
 #include "core/memory/RAM.h"
 
+class GTIA;
+
 class GTIA_Registers : public RAM
 {
 

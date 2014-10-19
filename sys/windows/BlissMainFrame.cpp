@@ -287,7 +287,7 @@ BOOL BlissMainFrame::LoadRip(const CHAR* filename)
             return FALSE;
 
         CHAR fileSubname[MAX_PATH];
-        CHAR* filenameStart = strrchr(filename, '\\')+1;
+        CHAR* filenameStart = (CHAR*)strrchr(filename, '\\')+1;
         strncpy(fileSubname, filenameStart, strlen(filenameStart)-4);
         *(fileSubname+strlen(filenameStart)-4) = NULL;
         SaveRip(fileSubname);
@@ -300,7 +300,7 @@ BOOL BlissMainFrame::LoadRip(const CHAR* filename)
             return FALSE;
 
         CHAR fileSubname[MAX_PATH];
-        CHAR* filenameStart = strrchr(filename, '\\')+1;
+        CHAR* filenameStart = (CHAR*)strrchr(filename, '\\')+1;
         strncpy(fileSubname, filenameStart, strlen(filenameStart)-4);
         *(fileSubname+strlen(filenameStart)-4) = NULL;
         SaveRip(fileSubname);
@@ -313,7 +313,7 @@ BOOL BlissMainFrame::LoadRip(const CHAR* filename)
             return FALSE;
 
         CHAR fileSubname[MAX_PATH];
-        CHAR* filenameStart = strrchr(filename, '\\')+1;
+        CHAR* filenameStart = (CHAR*)strrchr(filename, '\\')+1;
         strncpy(fileSubname, filenameStart, strlen(filenameStart)-4);
         *(fileSubname+strlen(filenameStart)-4) = NULL;
         SaveRip(fileSubname);
@@ -329,7 +329,7 @@ BOOL BlissMainFrame::LoadRip(const CHAR* filename)
             return FALSE;
 
         CHAR fileSubname[MAX_PATH];
-        CHAR* filenameStart = strrchr(filename, '\\')+1;
+        CHAR* filenameStart = (CHAR*)strrchr(filename, '\\')+1;
         strncpy(fileSubname, filenameStart, strlen(filenameStart)-4);
         *(fileSubname+strlen(filenameStart)-4) = NULL;
         SaveRip(fileSubname);
@@ -492,7 +492,7 @@ HRESULT BlissMainFrame::InitializeDirect3D()
     return res;
 }
 
-HRESULT BlissMainFrame::InitializeDirectSound()
+HRESULT BlissMainFrame::InitializeDirectSound(DWORD sampleRate)
 {
     //release any currently held DirectSound resources
     ReleaseDirectSound();
@@ -508,12 +508,12 @@ HRESULT BlissMainFrame::InitializeDirectSound()
 	ZeroMemory(&wfx, sizeof(WAVEFORMATEX));
     wfx.wFormatTag = WAVE_FORMAT_PCM;
     //configure the sample rate
-	wfx.nSamplesPerSec = 22050;
+	wfx.nSamplesPerSec = sampleRate;
     wfx.nChannels = 1;
     wfx.wBitsPerSample = 16;
     wfx.nBlockAlign = 2;
     //the length of the buffer must be divisible by 4 for implementation reasons
-	wfx.nAvgBytesPerSec = wfx.nSamplesPerSec *(wfx.wBitsPerSample/8);
+	wfx.nAvgBytesPerSec = wfx.nSamplesPerSec * (wfx.wBitsPerSample/8);
     DSBUFFERDESC bdesc;
 	ZeroMemory(&bdesc, sizeof(bdesc));
 	bdesc.dwSize = sizeof(DSBUFFERDESC);
@@ -521,10 +521,10 @@ HRESULT BlissMainFrame::InitializeDirectSound()
     bdesc.dwFlags = DSBCAPS_CTRLPAN | DSBCAPS_CTRLVOLUME | DSBCAPS_CTRLFREQUENCY |
         DSBCAPS_CTRLPOSITIONNOTIFY | DSBCAPS_GLOBALFOCUS;
 
-	int ms = 200;
+	int ms = 100;
     bdesc.dwBufferBytes = ((wfx.nAvgBytesPerSec*ms)/1000) & 0x7FFFFFFC;
 
-    //finally, create the actual buffer
+	//finally, create the actual buffer
 	IDirectSoundBuffer* buffer;
 	if ((res = directSound->CreateSoundBuffer(&bdesc, &buffer, NULL)) != DS_OK)
 		return res;
@@ -582,12 +582,13 @@ BOOL BlissMainFrame::InitializeEmulator()
             return FALSE;
     }
     
+	//hook the audio and video up to the currentEmulator
+	currentEmu->InitVideo(videoBus,currentEmu->GetVideoWidth(),currentEmu->GetVideoHeight());
+    currentEmu->InitAudio(audioMixer,44100);
+
     //put the RIP in the currentEmulator
-    //currentEmu.AudioMixer.HighQualityMixing = config.Get("Audio.HighQualityMixing", "True") == "True" ? true : false;
-    currentEmu->InitVideo(direct3dDevice);
-    currentEmu->InitAudio(directSoundBuffer);
-    currentEmu->SetRip(currentRip);
-    
+	currentEmu->SetRip(currentRip);
+
     //finally, run everything
     currentEmu->Reset();
 
@@ -758,13 +759,16 @@ LRESULT BlissMainFrame::OnStartUp()
 		MessageBox("Unable to initialize Direct3D.", "Error", MB_OK);
 		return ERROR;
 	}
-	if ((res = InitializeDirectSound()) != DS_OK) {
+	if ((res = InitializeDirectSound(44100)) != DS_OK) {
         ReleaseDirect3D();
 		MessageBox("Unable to initialize DirectSound.", "Error", MB_OK);
 		return ERROR;
 	}
     //TODO: handle direct input initialization errors
     InitializeDirectInput();
+
+	videoBus = new VideoBusWinD3D(direct3dDevice);
+	audioMixer = new AudioMixerWinDS(directSoundBuffer);
 
     return S_OK;
 }
@@ -805,7 +809,7 @@ void BlissMainFrame::SetFullScreen(BOOL fullScreen)
         ModifyStyle(m_hWnd, BLISS_WINDOW_STYLE, BLISS_FULLSCREEN_STYLE, SWP_DRAWFRAME | SWP_FRAMECHANGED);
     }
 
-    if (currentEmu)
+	if (currentEmu)
         currentEmu->ReleaseVideo();
 
     if (direct3dDevice->Reset(&presentParams) != D3D_OK) {
@@ -813,8 +817,8 @@ void BlissMainFrame::SetFullScreen(BOOL fullScreen)
 		return;
     }
 
-    if (currentEmu)
-        currentEmu->InitVideo(direct3dDevice);
+	if (currentEmu)
+        currentEmu->InitVideo(videoBus,currentEmu->GetVideoWidth(),currentEmu->GetVideoHeight());
 
     if (presentParams.Windowed) {
         ModifyStyle(m_hWnd, BLISS_FULLSCREEN_STYLE, BLISS_WINDOW_STYLE, SWP_DRAWFRAME | SWP_FRAMECHANGED);
@@ -844,7 +848,7 @@ BOOL BlissMainFrame::ReacquireDevice()
     if (res == D3D_OK)
         return TRUE;
 
-    if (currentEmu)
+	if (currentEmu)
         currentEmu->ReleaseVideo();
 
     if (res == D3DERR_DEVICENOTRESET) {
@@ -862,13 +866,13 @@ BOOL BlissMainFrame::ReacquireDevice()
 	    }
     }
 
-    if (currentEmu)
-        currentEmu->InitVideo(direct3dDevice);
+	if (currentEmu)
+        currentEmu->InitVideo(videoBus,currentEmu->GetVideoWidth(),currentEmu->GetVideoHeight());
 
     return TRUE;
 }
 
-afx_msg UINT BlissMainFrame::OnNcHitTest(CPoint point)
+LRESULT BlissMainFrame::OnNcHitTest(CPoint point)
 {
     if (!presentParams.Windowed)
         return HTCLIENT;
@@ -919,7 +923,7 @@ void BlissMainFrame::OnTimer(UINT)
         while(ShowCursor(FALSE) >= 0);
         cursorShowing = FALSE;
     }
-    this->KillTimer(1);
+	this->KillTimer(1);
 }
 
 #ifdef _DEBUG
