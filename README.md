@@ -1,11 +1,17 @@
 BLISS - Intellivision Emulator
 ==============================
-
 Originally developed by Kyle Davis
 
 Contributions by Jesse Litton, Mike Dunston, Joseph Zbiciak
 
 This fork is maintained by Jeremiah Sypult with a focus on adding cross-platform support (primarily targeting OS X).
+
+Development
+-----------
+
+### Windows
+
+The solution and project files are currently versioned for Visual Studio .NET 2003. The Direct X SDK is required to build. Support for building with Visual Studio Express is unknown since the project makes use of MFC.
 
 Requirements
 ------------
