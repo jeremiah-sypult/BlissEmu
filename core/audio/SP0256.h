@@ -9,6 +9,35 @@
 #include "core/memory/ROM.h"
 #include "AudioOutputLine.h"
 
+TYPEDEF_STRUCT_PACK( _SP0256State
+{
+    INT32 bitsLeft;
+    INT32 currentBits;
+    INT32 pc;
+    INT32 stack;
+    INT32 mode;
+    INT32 repeatPrefix;
+    INT32 page;
+    INT32 command;
+    INT32 repeat;
+    INT32 period;
+    INT32 periodCounter;
+    INT32 amplitude;
+    INT32 random;
+    INT32 fifoHead;
+    INT32 fifoSize;
+    INT32 fifoBytes[64];
+    INT32 y[6][2];
+    INT8  b[6];
+    INT8  f[6];
+    INT8  periodInterpolation;
+    INT8  amplitudeInterpolation;
+    INT8  idle;
+    INT8  lrqHigh;
+    INT8  speaking;
+    UINT8 _pad6[3];
+} SP0256State; )
+
 class SP0256 : public Processor, public AudioProducer
 {
 
@@ -22,6 +51,9 @@ class SP0256 : public Processor, public AudioProducer
         INT32 getSampleRate() { return getClockSpeed(); }
         INT32 tick(INT32);
         inline BOOL isIdle() { return idle; }
+
+        SP0256State getState();
+        void setState(SP0256State state);
 
         SP0256_Registers registers;
         ROM        ivoiceROM;
@@ -89,7 +121,6 @@ class SP0256 : public Processor, public AudioProducer
 
         //coefficient table
         static const INT32 qtbl[256];
-
 };
 
 #endif

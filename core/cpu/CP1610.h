@@ -11,6 +11,21 @@
 
 #define CP1610_PIN_OUT_BUSAK 0
 
+TYPEDEF_STRUCT_PACK( _CP1610State
+{
+    INT8     S;
+    INT8     Z;
+    INT8     O;
+    INT8     C;
+    INT8     I;
+    INT8     D;
+    INT8     interruptible;
+    INT8     ext;
+    UINT16   interruptAddress;
+    UINT16   resetAddress;
+    UINT16   r[8];
+} CP1610State; )
+
 class CP1610 : public Processor
 {
 
@@ -46,7 +61,8 @@ class CP1610 : public Processor
         UINT32 decode(CHAR description[256], UINT32 memoryLocation);
         UINT32 getProgramCounter();
 #endif
-
+        CP1610State getState();
+        void setState(CP1610State state);
 
     private:
         void setIndirect(UINT16 register, UINT16 value);
@@ -148,7 +164,6 @@ class CP1610 : public Processor
 
         //the four external lines
         INT8 ext;
-
 };
 
 #endif

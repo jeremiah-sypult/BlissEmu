@@ -18,6 +18,9 @@ class Atari5200 : public Emulator
     public:
         Atari5200();
 
+        BOOL SaveState(const CHAR* filename);
+        BOOL LoadState(const CHAR* filename);
+
     private:
         JoyPad      leftInput;
         JoyPad      rightInput;
@@ -32,4 +35,3 @@ class Atari5200 : public Emulator
 };
 
 #endif
-

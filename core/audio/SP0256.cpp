@@ -853,3 +853,70 @@ INT32 SP0256::flipEndian(INT32 value, INT32 bits) {
     return output;
 }
 
+SP0256State SP0256::getState()
+{
+	SP0256State state = {0};
+
+	state.bitsLeft = this->bitsLeft;
+	state.currentBits = this->currentBits;
+
+	state.pc = this->pc;
+	state.stack = this->stack;
+	state.mode = this->mode;
+	state.repeatPrefix = this->repeatPrefix;
+	state.page = this->page;
+	state.command = this->command;
+
+	state.idle = this->idle;
+	state.lrqHigh = this->lrqHigh;
+	state.speaking = this->speaking;
+	memcpy(state.fifoBytes, this->fifoBytes, sizeof(this->fifoBytes));
+	state.fifoHead = this->fifoHead;
+	state.fifoSize = this->fifoSize;
+
+	state.repeat = this->repeat;
+	state.period = this->period;
+	state.periodCounter = this->periodCounter;
+	state.amplitude = this->amplitude;
+	memcpy(state.b, this->b, sizeof(this->b));
+	memcpy(state.f, this->f, sizeof(this->f));
+	memcpy(state.y, this->y, sizeof(this->f));
+	state.periodInterpolation = this->periodInterpolation;
+	state.amplitudeInterpolation = this->amplitudeInterpolation;
+
+	state.random = this->random;
+
+	return state;
+}
+
+void SP0256::setState(SP0256State state)
+{
+	this->bitsLeft = state.bitsLeft;
+	this->currentBits = state.currentBits;
+
+	this->pc = state.pc;
+	this->stack = state.stack;
+	this->mode = state.mode;
+	this->repeatPrefix = state.repeatPrefix;
+	this->page = state.page;
+	this->command = state.command;
+
+	this->idle = state.idle;
+	this->lrqHigh = state.lrqHigh;
+	this->speaking = state.speaking;
+	memcpy(this->fifoBytes, state.fifoBytes, sizeof(this->fifoBytes));
+	this->fifoHead = state.fifoHead;
+	this->fifoSize = state.fifoSize;
+
+	this->repeat = state.repeat;
+	this->period = state.period;
+	this->periodCounter = state.periodCounter;
+	this->amplitude = state.amplitude;
+	memcpy(this->b, state.b, sizeof(this->b));
+	memcpy(this->f, state.f, sizeof(this->f));
+	memcpy(this->y, state.y, sizeof(this->f));
+	this->periodInterpolation = state.periodInterpolation;
+	this->amplitudeInterpolation = state.amplitudeInterpolation;
+
+	this->random = state.random;
+}

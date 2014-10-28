@@ -15,6 +15,24 @@
 #define AY38900_PIN_OUT_SR1 0
 #define AY38900_PIN_OUT_SR2 1
 
+TYPEDEF_STRUCT_PACK( _AY38900State
+{
+    BackTabRAMState backtab;
+    MOBState        mobs[8];
+    INT32           horizontalOffset;
+    INT32           verticalOffset;
+    INT32           mode;
+    UINT16          registers[0x40];
+    INT8            inVBlank;
+    INT8            previousDisplayEnabled;
+    INT8            displayEnabled;
+    INT8            colorStackMode;
+    UINT8           borderColor;
+    INT8            blockLeft;
+    INT8            blockTop;
+    UINT8           _pad[1];
+} AY38900State; )
+
 class AY38900 : public Processor, public VideoProducer
 {
 
@@ -49,6 +67,9 @@ public:
      * Implemented from the VideoProducer interface.
      */
     void render();
+
+	AY38900State getState();
+	void setState(AY38900State state);
 
     //registers
     AY38900_Registers registers;
@@ -89,18 +110,18 @@ private:
     const static UINT8 stretch[];
     const static UINT8 reverse[];
 
-    MemoryBus* memoryBus;
+    MemoryBus*      memoryBus;
 
-    UINT16                  mobBuffers[8][128];
-    MOB                     mobs[8];
-    UINT8                   backgroundBuffer[160*96];
+    UINT16          mobBuffers[8][128];
+    MOB             mobs[8];
+    UINT8           backgroundBuffer[160*96];
 
-	UINT32*					pixelBuffer;
-	UINT32					pixelBufferRowSize;
+    UINT32*         pixelBuffer;
+    UINT32          pixelBufferRowSize;
 
     //memory listeners, for optimizations
-    ROM*              grom;
-    GRAM*             gram;
+    ROM*            grom;
+    GRAM*           gram;
 
     //state info
     BOOL            inVBlank;

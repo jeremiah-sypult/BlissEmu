@@ -5,7 +5,7 @@
 ECS::ECS()
 : Peripheral("Electronic Computer System", "ECS"),
   keyboard(2),
-  ramBank(0x0800, 0x4000, 8),
+  ramBank(ECS_RAM_SIZE, 0x4000, 8),
   uart(4, 0xE0, 8),
   psg2(0x00F0, &keyboard, &keyboard),
   bank0("ECS ROM #1", "ecs.bin", 0, 2, 0x1000, 0x2000),
@@ -30,4 +30,22 @@ ECS::ECS()
     AddRAM(&psg2.registers);
 
     AddInputConsumer(&keyboard);
+}
+
+ECSState ECS::getState()
+{
+    ECSState state = {0};
+
+    state.ramState = ramBank.getState(state.ramImage);
+    state.uartState = uart.getState(NULL);
+    state.psg2State = psg2.getState();
+
+    return state;
+}
+
+void ECS::setState(ECSState state)
+{
+    ramBank.setState(state.ramState, state.ramImage);
+    uart.setState(state.uartState, NULL);
+    psg2.setState(state.psg2State);
 }

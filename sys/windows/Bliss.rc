@@ -66,10 +66,13 @@ BEGIN
     POPUP "&File"
     BEGIN
         MENUITEM "&Open...\tCtrl+O",            ID_FILE_OPEN
-        MENUITEM "&Reset",                      ID_FILE_RESET, INACTIVE
+        MENUITEM "&Reset\tShift+Ctrl+R",        ID_FILE_RESET, INACTIVE
         MENUITEM "&Close",                      ID_FILE_CLOSE, INACTIVE
         MENUITEM SEPARATOR
-        MENUITEM "&Settings...",                ID_SETTINGS
+        MENUITEM "Quick &Load State...\tShift+Ctrl+L", ID_FILE_QUICKLOAD, INACTIVE
+        MENUITEM "Quick &Save State...\tShift+Ctrl+S", ID_FILE_QUICKSAVE, INACTIVE
+        MENUITEM SEPARATOR
+        MENUITEM "Settings...",                 ID_SETTINGS
         MENUITEM SEPARATOR
         MENUITEM "E&xit\tAlt+F4",               ID_APP_EXIT
     END
@@ -110,7 +113,7 @@ BEGIN
             VALUE "LegalCopyright", "Released under the GNU Public License"
             VALUE "OriginalFilename", "Bliss.exe"
             VALUE "ProductName", "Bliss - The Intellivision Emulator"
-            VALUE "ProductVersion", "2.0.0"
+            VALUE "ProductVersion", "2.1.0"
         END
     END
     BLOCK "VarFileInfo"
@@ -204,6 +207,9 @@ IDR_ACCELERATOR ACCELERATORS
 BEGIN
     VK_RETURN,      ID_VIEW_FULLSCREENMODE, VIRTKEY, ALT, NOINVERT
     "O",            ID_FILE_OPEN,           VIRTKEY, CONTROL, NOINVERT
+    "L",            ID_FILE_QUICKLOAD,      VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "S",            ID_FILE_QUICKSAVE,      VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "R",            ID_FILE_RESET,          VIRTKEY, SHIFT, CONTROL, NOINVERT
     "P",            ID_VIEW_PAUSE,          VIRTKEY, ALT, NOINVERT
 END
 

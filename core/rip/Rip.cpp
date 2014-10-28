@@ -20,12 +20,14 @@
 Rip::Rip(UINT32 systemID)
 : Peripheral("", ""),
   peripheralCount(0),
-  targetSystemID(systemID)
+  targetSystemID(systemID),
+  crc(0)
 {
     producer = new CHAR[1];
     strcpy(producer, "");
     year = new CHAR[1];
     strcpy(year, "");
+    memset(filename, 0, sizeof(filename));
 }
 
 Rip::~Rip()
@@ -130,6 +132,9 @@ Rip* Rip::LoadA52(const CHAR* filename)
 
     delete[] image;
 
+    rip->SetFileName(filename);
+    rip->crc = CRC32::getCrc(filename);
+
     return rip;
 }
 
@@ -177,6 +182,9 @@ Rip* Rip::LoadBin(const CHAR* filename, const CHAR* configFile)
     }
 
     delete[] image;
+
+    rip->SetFileName(filename);
+    rip->crc = CRC32::getCrc(filename);
 
     return rip;
 }
@@ -318,10 +326,10 @@ Rip* Rip::LoadCartridgeConfiguration(const CHAR* configFile, UINT32 crc)
                 continue;
 
             PeripheralCompatibility pc;
-            if (strcmpi(nextToken+1, "optional") != 0)
-                pc = PERIPH_OPTIONAL;
-            else if (strcmpi(nextToken+1, "required") != 0)
+            if (strcmpi(nextToken+1, "required") != 0)
                 pc = PERIPH_REQUIRED;
+            else if (strcmpi(nextToken+1, "optional") != 0)
+                pc = PERIPH_OPTIONAL;
             else
                 continue;
 
@@ -464,6 +472,9 @@ Rip* Rip::LoadRom(const CHAR* filename)
         }
     }
     fclose(infile);
+
+    rip->SetFileName(filename);
+    rip->crc = CRC32::getCrc(filename);
 
     return rip;
 }
@@ -663,6 +674,9 @@ Rip* Rip::LoadRip(const CHAR* filename)
     }
     fclose(file);
 
+    rip->SetFileName(filename);
+    rip->crc = CRC32::getCrc(filename);
+
     return rip;
 }
 
@@ -717,6 +731,9 @@ Rip* Rip::LoadZip(const CHAR* filename, const CHAR* configFile)
         }
 
         delete[] image;
+
+        rip->SetFileName(filename);
+        rip->crc = crc;
 
         return rip;
 
@@ -877,4 +894,3 @@ BOOL Rip::SaveRip(const CHAR* filename)
 
     return 0;
 }
-

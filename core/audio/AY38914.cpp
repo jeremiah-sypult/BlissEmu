@@ -221,3 +221,70 @@ INT32 AY38914::tick(INT32 minimum)
 	return totalTicks;
 }
 
+AY38914State AY38914::getState()
+{
+	AY38914State state = {0};
+
+	this->registers.getMemory(state.registers, 0, this->registers.getMemoryByteSize());
+
+	state.clockDivisor = this->clockDivisor;
+
+	state.channel0 = this->channel0.getState();
+	state.channel1 = this->channel1.getState();
+	state.channel2 = this->channel2.getState();
+
+	state.cachedTotalOutputIsDirty = this->cachedTotalOutputIsDirty;
+	state.cachedTotalOutput = this->cachedTotalOutput;
+
+	state.envelopeIdle = this->envelopeIdle;
+	state.envelopePeriod = this->envelopePeriod;
+	state.envelopePeriodValue = this->envelopePeriodValue;
+	state.envelopeCounter = this->envelopeCounter;
+	state.envelopeVolume = this->envelopeVolume;
+	state.envelopeHold = this->envelopeHold;
+	state.envelopeAltr = this->envelopeAltr;
+	state.envelopeAtak = this->envelopeAtak;
+	state.envelopeCont = this->envelopeCont;
+
+	state.noiseIdle = this->noiseIdle;
+	state.noisePeriod = this->noisePeriod;
+	state.noisePeriodValue = this->noisePeriodValue;
+	state.noiseCounter = this->noiseCounter;
+
+	state.random = this->random;
+	state.noise = this->noise;
+
+	return state;
+}
+
+void AY38914::setState(AY38914State state)
+{
+	this->registers.setMemory(state.registers, 0, this->registers.getMemoryByteSize());
+
+	this->clockDivisor = state.clockDivisor;
+
+	this->channel0.setState(state.channel0);
+	this->channel1.setState(state.channel1);
+	this->channel2.setState(state.channel2);
+
+	this->cachedTotalOutputIsDirty = state.cachedTotalOutputIsDirty;
+	this->cachedTotalOutput = state.cachedTotalOutput;
+
+	this->envelopeIdle = state.envelopeIdle;
+	this->envelopePeriod = state.envelopePeriod;
+	this->envelopePeriodValue = state.envelopePeriodValue;
+	this->envelopeCounter = state.envelopeCounter;
+	this->envelopeVolume = state.envelopeVolume;
+	this->envelopeHold = state.envelopeHold;
+	this->envelopeAltr = state.envelopeAltr;
+	this->envelopeAtak = state.envelopeAtak;
+	this->envelopeCont = state.envelopeCont;
+
+	this->noiseIdle = state.noiseIdle;
+	this->noisePeriod = state.noisePeriod;
+	this->noisePeriodValue = state.noisePeriodValue;
+	this->noiseCounter = state.noiseCounter;
+
+	this->random = state.random;
+	this->noise = state.noise;
+}

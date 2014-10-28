@@ -14,11 +14,16 @@
 #include "core/video/AY38900.h"
 #include "core/audio/AY38914.h"
 
+#define RAM8BIT_SIZE    0x00F0
+#define RAM16BIT_SIZE   0x0160
+
 class Intellivision : public Emulator
 {
-
     public:
         Intellivision();
+
+        BOOL SaveState(const CHAR* filename);
+        BOOL LoadState(const CHAR* filename);
 
     private:
         //core processors
@@ -42,7 +47,6 @@ class Intellivision : public Emulator
     
         //the Intellivoice peripheral
         Intellivoice      intellivoice;
-
 };
 
 #endif

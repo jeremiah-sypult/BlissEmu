@@ -24,6 +24,10 @@ BEGIN_MESSAGE_MAP(BlissMainFrame, CFrameWnd)
 	ON_COMMAND(ID_FILE_OPEN, OnFileOpen)
 	ON_COMMAND(ID_FILE_RESET, OnFileReset)
     ON_UPDATE_COMMAND_UI(ID_FILE_RESET, OnCheckMenuItems)
+    ON_COMMAND(ID_FILE_QUICKLOAD, OnFileQuickLoad)
+    ON_UPDATE_COMMAND_UI(ID_FILE_QUICKLOAD, OnCheckMenuItems)
+    ON_COMMAND(ID_FILE_QUICKSAVE, OnFileQuickSave)
+    ON_UPDATE_COMMAND_UI(ID_FILE_QUICKSAVE, OnCheckMenuItems)
 	ON_COMMAND(ID_FILE_CLOSE, OnFileClose)
     ON_UPDATE_COMMAND_UI(ID_FILE_CLOSE, OnCheckMenuItems)
 	ON_COMMAND(ID_SETTINGS, OnSettings)
@@ -116,6 +120,8 @@ void BlissMainFrame::OnCheckMenuItems(CCmdUI* pCmdUI)
     switch (pCmdUI->m_nID) {
         case ID_FILE_RESET:
         case ID_FILE_CLOSE:
+        case ID_FILE_QUICKLOAD:
+        case ID_FILE_QUICKSAVE:
             pCmdUI->Enable(runState >= Paused);
             break;
         case ID_VIEW_PAUSE:
@@ -325,6 +331,7 @@ BOOL BlissMainFrame::LoadRip(const CHAR* filename)
         strcpy(cfgFilename, theApp.StartUpPath);
         strcat(cfgFilename, "\\knowncarts.cfg");
         currentRip = Rip::LoadZip(filename, cfgFilename);
+        delete[] cfgFilename;
         if (currentRip == NULL)
             return FALSE;
 
@@ -379,6 +386,52 @@ void BlissMainFrame::OnFileReset()
         return;
 
     currentEmu->Reset();
+}
+
+void BlissMainFrame::OnFileQuickLoad()
+{
+	CHAR SAVFile[MAX_PATH] = {0};
+	CHAR *tmp = NULL;
+
+	if (currentRip) {
+		const CHAR* ROMFileName = currentRip->GetFileName();
+
+		strncpy(SAVFile, ROMFileName, sizeof(SAVFile));
+
+		tmp = strrchr(SAVFile, '.');
+
+		if (tmp) {
+			tmp++;
+			tmp[0] = 's';
+			tmp[1] = 'a';
+			tmp[2] = 'v';
+			tmp[3] = '\0';
+			currentEmu->LoadState(SAVFile);
+		}
+	}
+}
+
+void BlissMainFrame::OnFileQuickSave()
+{
+	CHAR SAVFile[MAX_PATH] = {0};
+	CHAR *tmp = NULL;
+
+	if (currentRip) {
+		const CHAR* ROMFileName = currentRip->GetFileName();
+
+		strncpy(SAVFile, ROMFileName, sizeof(SAVFile));
+
+		tmp = strrchr(SAVFile, '.');
+
+		if (tmp) {
+			tmp++;
+			tmp[0] = 's';
+			tmp[1] = 'a';
+			tmp[2] = 'v';
+			tmp[3] = '\0';
+			currentEmu->SaveState(SAVFile);
+		}
+	}
 }
 
 void BlissMainFrame::OnFileClose()
@@ -882,6 +935,22 @@ LRESULT BlissMainFrame::OnNcHitTest(CPoint point)
 
 void BlissMainFrame::ShutDown()
 {
+    if (openDialog) {
+        delete openDialog;
+        openDialog = NULL;
+    }
+
+    if (audioMixer) {
+        delete audioMixer;
+        audioMixer = NULL;
+    }
+
+    if (videoBus) {
+        delete videoBus;
+        videoBus = NULL;
+    }
+
+
     ReleaseDirectInput();
     ReleaseDirectSound();
     ReleaseDirect3D();

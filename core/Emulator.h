@@ -16,6 +16,30 @@
 #include "core/memory/MemoryBus.h"
 #include "core/memory/Memory.h"
 
+typedef struct _StateHeader
+{
+    UINT32   emu;
+    UINT32   state;
+    UINT32   emuID;
+    UINT32   version;
+    UINT32   sys;
+    UINT32   sysID;
+    UINT32   cart;
+    UINT32   cartID;
+} StateHeader;
+
+typedef struct _StateChunk
+{
+    UINT32   id;
+    UINT32   size;
+} StateChunk;
+
+#if defined(DEBUG)
+#define EMU_STATE_VERSION ('dev\0')
+#else
+#define EMU_STATE_VERSION (0x02010000)
+#endif
+
 class Intellivision;
 class Atari5200;
 
@@ -49,6 +73,9 @@ class Emulator : public Peripheral
         void FlushAudio();
 		void Render();
 
+        virtual BOOL SaveState(const CHAR* filename) = 0;
+        virtual BOOL LoadState(const CHAR* filename) = 0;
+
 		static UINT32 GetEmulatorCount();
         static Emulator* GetEmulator(UINT32 i);
 		static Emulator* GetEmulatorByID(UINT32 targetSystemID);
@@ -58,8 +85,10 @@ class Emulator : public Peripheral
 
         MemoryBus          memoryBus;
 
-		UINT32 videoWidth;
-		UINT32 videoHeight;
+        Rip*               currentRip;
+
+        UINT32             videoWidth;
+        UINT32             videoHeight;
 
     private:
         ProcessorBus       processorBus;
@@ -69,8 +98,6 @@ class Emulator : public Peripheral
 
         void InsertPeripheral(Peripheral* p);
         void RemovePeripheral(Peripheral* p);
-
-        Rip*     currentRip;
 
         Peripheral*     peripherals[MAX_PERIPHERALS];
         BOOL            usePeripheralIndicators[MAX_PERIPHERALS];
@@ -84,4 +111,3 @@ class Emulator : public Peripheral
 };
 
 #endif
-

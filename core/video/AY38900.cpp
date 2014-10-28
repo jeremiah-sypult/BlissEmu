@@ -914,6 +914,60 @@ BOOL AY38900::mobsCollide(int mobNum0, int mobNum1)
     return FALSE;
 }
 
+AY38900State AY38900::getState()
+{
+	AY38900State state = {0};
+
+	this->registers.getMemory(state.registers, 0, this->registers.getMemoryByteSize());
+	state.backtab = this->backtab.getState();
+
+	state.inVBlank = this->inVBlank;
+	state.mode = this->mode;
+	state.previousDisplayEnabled = this->previousDisplayEnabled;
+	state.displayEnabled = this->displayEnabled;
+	state.colorStackMode = this->colorStackMode;
+
+	state.borderColor = this->borderColor;
+	state.blockLeft = this->blockLeft;
+	state.blockTop = this->blockTop;
+	state.horizontalOffset = this->horizontalOffset;
+	state.verticalOffset = this->verticalOffset;
+
+	for (int i = 0; i < 8; i++) {
+		state.mobs[i] = this->mobs[i].getState();
+	}
+
+	return state;
+}
+
+void AY38900::setState(AY38900State state)
+{
+	this->registers.setMemory(state.registers, 0, this->registers.getMemoryByteSize());
+	this->backtab.setState(state.backtab, state.backtab.image);
+
+	this->inVBlank = state.inVBlank;
+	this->mode = state.mode;
+	this->previousDisplayEnabled = state.previousDisplayEnabled;
+	this->displayEnabled = state.displayEnabled;
+	this->colorStackMode = state.colorStackMode;
+
+	this->borderColor = state.borderColor;
+	this->blockLeft = state.blockLeft;
+	this->blockTop = state.blockTop;
+	this->horizontalOffset = state.horizontalOffset;
+	this->verticalOffset = state.verticalOffset;
+
+	for (int i = 0; i < 8; i++) {
+		mobs[i].setState(state.mobs[i]);
+	}
+
+	this->colorModeChanged = TRUE;
+	this->bordersChanged = TRUE;
+	this->colorStackChanged = TRUE;
+	this->offsetsChanged = TRUE;
+	this->imageBufferChanged = TRUE;
+}
+
 /*
 void AY38900::renderRow(int rowNum) {
     UINT8 backTabPtr = (UINT8)(0x200+(rowNum*20));
@@ -990,4 +1044,3 @@ void AY38900::renderRow(int rowNum) {
     }
 }
 */
-

@@ -16,13 +16,22 @@ class AY38900_Registers : public RAM
         void poke(UINT16 location, UINT16 value);
         UINT16 peek(UINT16 location);
 
+        inline size_t getMemoryByteSize() {
+            return sizeof(memory);
+        }
+        void getMemory(void* dst, UINT16 offset, UINT16 size) {
+            memcpy(dst, memory + offset, size);
+        }
+        void setMemory(void* src, UINT16 offset, UINT16 size) {
+            memcpy(memory + offset, src, size);
+        }
+
     private:
         AY38900_Registers();
         void init(AY38900* ay38900);
 
         AY38900* ay38900;
         UINT16   memory[0x40];
-
 };
 
 #endif

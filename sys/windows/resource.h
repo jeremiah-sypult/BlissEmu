@@ -19,6 +19,8 @@
 #define ID_SETTINGS                     32775
 #define ID_VIEW_FULLSCREENMODE          32776
 #define ID_VIEW_PAUSE                   32779
+#define ID_FILE_QUICKLOAD               32780
+#define ID_FILE_QUICKSAVE               32781
 
 // Next default values for new objects
 // 
