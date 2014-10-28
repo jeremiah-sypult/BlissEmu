@@ -3,11 +3,12 @@
     - offer the ability to display the overlays somehow, maybe as a toggle display for the
       lower left and right sides of the screen
 - input
+    - move Classic Game Controller (CGC) support code out of core (Windows)
     - bug where I can't add bindings to the ECS keyboard default bindings; have to clear the
       binding first because it's getting confused somehow
     - allow the user to custom-bind different controls to different games
 - saving and loading
-    - saving and loading game state
+    - saving and loading atari 5200 game state
     - saving screenshots
     - record/playback (save the inputs and play them back)
     - record audio

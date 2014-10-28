@@ -46,3 +46,14 @@ Atari5200::Atari5200()
     AddInputConsumer(&rightInput);
 }
 
+BOOL Atari5200::SaveState(const CHAR* filename)
+{
+    printf("Atari5200::SaveState is not implemented\n");
+    return FALSE;
+}
+
+BOOL Atari5200::LoadState(const CHAR* filename)
+{
+    printf("Atari5200::LoadState is not implemented\n");
+    return FALSE;
+}

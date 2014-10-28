@@ -21,7 +21,7 @@ class AudioMixer : public Processor
         virtual ~AudioMixer();
 
         inline INT16 clipSample(INT64 sample) {
-            return sample > 32767 ? 32767 : sample < -32768 ? -32768 : sample;
+            return sample > 32767 ? 32767 : sample < -32768 ? -32768 : (INT16)sample;
         }
 
         virtual void resetProcessor();
@@ -37,6 +37,10 @@ class AudioMixer : public Processor
         void removeAudioProducer(AudioProducer*);
         void removeAll();
 
+        void setGain(float g) {
+            this->gain = g;
+        }
+
     protected:
         //output info
         INT32 clockSpeed;
@@ -49,6 +53,8 @@ class AudioMixer : public Processor
         UINT32 sampleBufferSize;
         UINT32 sampleCount;
         UINT32 sampleSize;
+
+        float gain;
 };
 
 #endif

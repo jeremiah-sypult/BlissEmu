@@ -13,7 +13,8 @@ AudioMixer::AudioMixer()
     sampleBuffer(NULL),
     sampleBufferSize(0),
     sampleCount(0),
-    sampleSize(0)
+    sampleSize(0),
+	gain(1.0f)
 {
 	memset(&audioProducers, 0, sizeof(audioProducers));
 }
@@ -145,7 +146,7 @@ INT32 AudioMixer::tick(INT32 minimum)
             totalSample = totalSample / audioProducerCount;
         }
 
-        sampleBuffer[sampleCount++] = clipSample(totalSample);
+        sampleBuffer[sampleCount++] = clipSample((totalSample * this->gain) + 0.5f);
 
         if (sampleCount == sampleSize) {
             flushAudio();

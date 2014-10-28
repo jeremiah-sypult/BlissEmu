@@ -4642,3 +4642,36 @@ INT32 CP1610::decode(UINT16 op)
     }
 }
 
+CP1610State CP1610::getState()
+{
+	CP1610State state = {0};
+
+	state.interruptAddress = this->interruptAddress;
+	state.resetAddress = this->resetAddress;
+	memcpy(state.r, this->r, sizeof(this->r));
+	state.S = this->S;
+	state.Z = this->Z;
+	state.O = this->O;
+	state.C = this->C;
+	state.I = this->I;
+	state.D = this->D;
+	state.interruptible = this->interruptible;
+	state.ext = this->ext;
+
+	return state;
+}
+
+void CP1610::setState(CP1610State state)
+{
+	this->interruptAddress = state.interruptAddress;
+	this->resetAddress = state.resetAddress;
+	memcpy(this->r, state.r, sizeof(this->r));
+	this->S = state.S;
+	this->Z = state.Z;
+	this->O = state.O;
+	this->C = state.C;
+	this->I = state.I;
+	this->D = state.D;
+	this->interruptible = state.interruptible;
+	this->ext = state.ext;
+}

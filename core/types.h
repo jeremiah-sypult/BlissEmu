@@ -49,7 +49,33 @@ typedef int						BOOL;
 #endif
 #endif
 
-// jeremiah sypult
+#define SWAP32BIT(swap)			((((swap) << 24) & 0xFF000000) | \
+								 (((swap) <<  8) & 0x00FF0000) | \
+								 (((swap) >>  8) & 0x0000FF00) | \
+								 (((swap) >> 24) & 0x000000FF))
+
+#if !defined(__LITTLE_ENDIAN__) && defined(_WIN32)
+#define __LITTLE_ENDIAN__		(1)
+#endif
+
+#if defined(__LITTLE_ENDIAN__)
+#define FOURCHAR(x) SWAP32BIT((UINT32)(x))
+#else
+#define FOURCHAR(x) (x)
+#endif
+
+#if defined(__GNUC__)
+#define TYPEDEF_STRUCT_PACK(_x_) typedef struct __attribute__((__packed__)) _x_
+#define PACKED(_x_) _x_ __attribute__((__packed__))
+#elif defined(_MSC_VER)
+#define TYPEDEF_STRUCT_PACK(_x_) __pragma(pack(1)) typedef struct _x_ __pragma(pack())
+#define PACKED(_x_) __pragma(pack(push,1)) _x_ __pragma(pack(pop))
+#else
+#define TYPEDEF_STRUCT_PACK(_x_) _x_
+#define PACKED(_x_) _x_
+#warning pack macro is not supported on this compiler
+#endif
+
 #if defined( __MACH__ )
 #include <string.h>
 

@@ -1,3 +1,9 @@
+v2.1.0 - October 27, 2014
+- Added support for saving and loading Intellivision game states.
+- Refactored code for multi-platform support.
+  See https://github.com/jeremiah-sypult/BlissEmu and
+  https://github.com/OpenEmu/OpenEmu
+
 v2.0.5 - May 25, 2005
 - Added support for the Classic Game Controller (CGC).
   See http://www.shiny-technologies.com/cgc.php for details on this device.

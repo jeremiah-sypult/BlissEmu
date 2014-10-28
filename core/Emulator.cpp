@@ -58,52 +58,56 @@ void Emulator::UsePeripheral(UINT32 i, BOOL b)
 
 UINT32 Emulator::GetVideoWidth()
 {
-	return videoWidth;
+    return videoWidth;
 }
 
 UINT32 Emulator::GetVideoHeight()
 {
-	return videoHeight;
+    return videoHeight;
 }
 
 void Emulator::InitVideo(VideoBus* video, UINT32 width, UINT32 height)
 {
-	if ( video != NULL ) {
-		videoBus = video;
-	}
+    if ( video != NULL ) {
+        videoBus = video;
+    }
 
     videoBus->init(width, height);
 }
 
 void Emulator::ReleaseVideo()
 {
-	videoBus->release();
-	videoBus = NULL;
+    if (videoBus) {
+        videoBus->release();
+        videoBus = NULL;
+    }
 }
 
 void Emulator::InitAudio(AudioMixer* audio, UINT32 sampleRate)
 {
-	if (audio != NULL) {
-		audioMixer = audio;
-	}
+    if (audio != NULL) {
+        audioMixer = audio;
+    }
 
-	// TODO: check for an existing audioMixer processor and release it
-	for (UINT16 i = 0; i < GetProcessorCount(); i++) {
-		Processor* p = GetProcessor(i);
-		if (p == audio) {
-			RemoveProcessor(audio);
-		}
-	}
+    // TODO: check for an existing audioMixer processor and release it
+    for (UINT16 i = 0; i < GetProcessorCount(); i++) {
+        Processor* p = GetProcessor(i);
+        if (p == audio) {
+            RemoveProcessor(audio);
+        }
+    }
 
-	AddProcessor(audioMixer);
-	audioMixer->init(sampleRate);
+    AddProcessor(audioMixer);
+    audioMixer->init(sampleRate);
 }
 
 void Emulator::ReleaseAudio()
 {
-	audioMixer->release();
-	RemoveProcessor(audioMixer);
-	audioMixer = NULL;
+    if (audioMixer) {
+        audioMixer->release();
+        RemoveProcessor(audioMixer);
+        audioMixer = NULL;
+    }
 }
 
 void Emulator::Reset()
@@ -141,7 +145,7 @@ void Emulator::SetRip(Rip* rip)
 
 void Emulator::InsertPeripheral(Peripheral* p)
 {
-	UINT16 i;
+    UINT16 i;
 
     //processors
     UINT16 count = p->GetProcessorCount();
@@ -179,7 +183,7 @@ void Emulator::InsertPeripheral(Peripheral* p)
 
 void Emulator::RemovePeripheral(Peripheral* p)
 {
-	UINT16 i;
+    UINT16 i;
 
     //processors
     UINT16 count = p->GetProcessorCount();
@@ -240,4 +244,3 @@ Emulator* Emulator::emus[] = {
     &atari5200,
     &inty,
 };
-

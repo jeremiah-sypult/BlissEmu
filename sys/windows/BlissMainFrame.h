@@ -36,6 +36,8 @@ protected:
     //menu item handlers
 	afx_msg void OnFileOpen();
 	afx_msg void OnFileReset();
+	afx_msg void OnFileQuickLoad();
+	afx_msg void OnFileQuickSave();
 	afx_msg void OnFileClose();
 	afx_msg void OnSettings();
 	afx_msg void OnClose();

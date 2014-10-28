@@ -52,12 +52,24 @@ public:
 
     BOOL SaveRip(const CHAR* filename);
 
+    const CHAR* GetFileName() {
+        return this->filename;
+    }
+
+    UINT32 GetCRC() {
+        return this->crc;
+    }
+
 private:
     Rip(UINT32 systemID);
     //Rip(UINT32 systemID, const CHAR* nme, const CHAR* prducer, const CHAR* yr);
 
     void AddPeripheralUsage(const CHAR* periphName, PeripheralCompatibility usage);
     static Rip* LoadCartridgeConfiguration(const CHAR* cfgFile, UINT32 crc);
+
+    void SetFileName(const CHAR* fname) {
+        strncpy(this->filename, fname, sizeof(this->filename));
+    }
 
     UINT32 targetSystemID;
     CHAR* producer;
@@ -68,6 +80,8 @@ private:
     PeripheralCompatibility peripheralUsages[MAX_PERIPHERALS];
     UINT32 peripheralCount;
 
+	CHAR filename[MAX_PATH];
+	UINT32 crc;
 };
 
 #endif

@@ -57,3 +57,27 @@ BOOL GRAM::isCardDirty(UINT16 cardLocation) {
     return dirtyCards[cardLocation>>3];
 }
 
+RAMState GRAM::getState(UINT16* image)
+{
+	RAMState state = {0};
+
+	state = RAM::getState(NULL);
+
+	if (image != NULL) {
+		this->getImage(image, 0, this->getImageByteSize());
+	}
+
+	return state;
+}
+
+void GRAM::setState(RAMState state, UINT16* image)
+{
+	RAM::setState(state, NULL);
+
+	if (image != NULL) {
+		this->setImage(image, 0, this->getImageByteSize());
+	}
+
+	memset(this->dirtyCards, TRUE, sizeof(this->dirtyCards));
+	this->dirtyRAM = TRUE;
+}
